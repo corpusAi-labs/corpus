@@ -289,6 +289,7 @@ aside[data-view-active="spaces"] { background-color: #faa200 !important; }
   flex-direction: column;
   gap: 24px;
   height: 100%;
+  width: 320px;
 }
 .bento-list-item {
   border-bottom: 1px solid rgba(255,255,255,0.2);

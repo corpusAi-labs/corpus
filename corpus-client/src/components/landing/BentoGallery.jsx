@@ -35,6 +35,8 @@ export default function BentoGallery() {
     <section className="bg-transparent overflow-hidden border-t border-black/10" id="gallery-trigger">
       <div className="h-screen flex items-center" id="gallery-container">
         <div className="flex items-center gap-12 px-[10vw]" id="gallery-track">
+          
+          {/* TITLE SECTION */}
           <div className="flex-shrink-0 w-[450px]">
             <h2 className="text-black text-7xl font-black uppercase leading-[0.9] tracking-tighter font-hanken">
               Your curated<br />
@@ -44,7 +46,10 @@ export default function BentoGallery() {
               Your second memory for links, notes, and research. Save in two seconds—AI handles the rest.
             </p>
           </div>
+
           <div className="bento-container">
+            
+            {/* 1. LARGE ORANGE CARD */}
             <div className="bento-panel bento-panel-large bg-[#f74700] p-12 flex flex-col justify-end text-white">
               <div className="absolute top-10 left-10">
                 <span className="px-4 py-2 border border-white/30 rounded-full text-xs font-bold uppercase tracking-widest font-hanken">
@@ -60,24 +65,55 @@ export default function BentoGallery() {
                 Drop in any link, note, quote, or image. Corpus instantly reads, tags, and files it away using AI—so you can search naturally whenever you need it again.
               </p>
             </div>
+
+            {/* 2. NEW TOP IMAGE + BOTTOM YELLOW CARD COLUMN */}
+            <div className="bento-grid-col flex flex-col gap-4 font-dm-sans">
+              
+              {/* TOP: Image Card */}
+              <div className="bento-panel flex-1 overflow-hidden">
+                <img
+                  alt="Archive Visual"
+                  className="w-full h-full object-cover"
+                  src="src/public/images/bento1.png"
+                />
+              </div>
+
+              {/* BOTTOM: Yellow Card */}
+              <div className="h-[35%] bento-panel bg-[#EAB308] flex items-center justify-center p-6 text-black shrink-0">
+                <div className="text-center">
+                  <h4 className="text-2xl font-black italic font-hanken uppercase tracking-tight">DRIFT MODE</h4>
+                  <p className="text-xs font-bold uppercase tracking-widest opacity-90 font-hanken mt-1">
+                    RECONNECT WITH SAVED IDEAS
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* 3. ORIGINAL MIDDLE IMAGE CARD */}
             <div className="bento-panel bento-panel-medium">
               <img
                 alt="Textures"
                 className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSQCrq4IZwsmpz6JVT2uei_c5YQLgb7ipl3PJ0LVmqSaQ1KtF85GEE7yA7Z8q1AqNFYY1GcsBZ8QnMn2UDV1bovl8svEscQ7Df_QdyzCxgRjh4wkWCtL395Rf9Ynx-fv0Fo1OFHEpjrI3K592aH0gV-eNj5vp1SxK33KxC7hbQmIvDuI8cjGWzNf9R2LPlgph48ik-G93tJu1_OBE753y-QlpK_G5D7IEHU1FzNdCEDz0fe7BylUYCvdpXJrEaXC1lEL7WU4TC2JXu"
+                src="src/public/images/bento2.png"
               />
             </div>
-            <div className="bento-grid-col bento-panel-small font-dm-sans">
-              <div className="flex-1 bento-panel bg-[#9439f9] p-10 text-white">
-                <h4 className="text-3xl font-black mb-1 font-hanken">Spaces & Organization</h4>
+
+            {/* 4. PURPLE & GREEN COLUMN */}
+            <div className="bento-grid-col flex flex-col gap-4 font-dm-sans">
+              
+              {/* TOP: Purple Card */}
+              <div className="bento-panel bg-[#9439f9] p-10 text-white flex-1">
+                <h4 className="text-3xl font-black mb-1 font-hanken">Spaces &amp; Organization</h4>
                 <p className="text-xs font-bold opacity-70 mb-6 uppercase tracking-wider font-hanken">
                   STRUCTURED WHEN YOU WANT IT
                 </p>
                 <div className="space-y-4">Dedicated archives for projects, research, and interest</div>
-                  <div className="bento-list-item text-lg">Custom names and colors to keep ideas visually distinct</div>
-                </div>
+                <div className="bento-list-item text-lg mt-2">Custom names and colors to keep ideas visually distinct</div>
               </div>
-              <div className="h-[35%] bento-panel bg-[#259d27] flex items-center justify-center p-8">
+
+              {/* BOTTOM: Green Card */}
+              <div className="h-[35%] bento-panel bg-[#259d27] flex items-center justify-center p-8 shrink-0">
                 <div className="text-white text-center">
                   <div className="text-5xl font-black italic font-hanken">100</div>
                   <div className="text-[12px] font-bold uppercase tracking-widest opacity-80 font-hanken">
@@ -85,10 +121,12 @@ export default function BentoGallery() {
                   </div>
                 </div>
               </div>
+
             </div>
+
           </div>
         </div>
-  
+      </div>
     </section>
   );
 }
