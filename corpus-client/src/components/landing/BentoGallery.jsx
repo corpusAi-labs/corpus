@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
+import bento1 from '../../assets/bento1.png';
+import bento2 from '../../assets/bento2.png';
+
 gsap.registerPlugin(ScrollTrigger);
 
 export default function BentoGallery() {
@@ -74,7 +77,7 @@ export default function BentoGallery() {
                 <img
                   alt="Archive Visual"
                   className="w-full h-full object-cover"
-                  src="/images/bento1.png"
+                  src={bento1}
                 />
               </div>
 
@@ -95,7 +98,7 @@ export default function BentoGallery() {
               <img
                 alt="Textures"
                 className="w-full h-full object-cover"
-                src="/images/bento2.png"
+                src={bento2}
               />
             </div>
 
