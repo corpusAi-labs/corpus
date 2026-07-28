@@ -25,6 +25,7 @@ export default function SpaceDetailPage() {
   const itemsQuery = useInfiniteQuery({
     queryKey: ['items', 'space', id],
     queryFn: ({ pageParam }) => fetchItems({ cursor: pageParam, spaceId: id }),
+    initialPageParam: undefined,
     getNextPageParam: last => last.nextCursor || undefined,
   })
 
@@ -70,70 +71,79 @@ export default function SpaceDetailPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-paper">
-      <Sidebar
-        activeType=""
-        onTypeChange={() => navigate('/dashboard')}
-        activeTag=""
-        onTagChange={() => navigate('/dashboard')}
-        allTags={[]}
-      />
+    <div className="min-h-screen relative w-full">
+      {/* Background grid overlay */}
+      <div className="fixed inset-0 pointer-events-none bg-grid-overlay z-0" data-purpose="background-pattern"></div>
 
-      <div className="flex-1 min-w-0">
-        <div className="px-6 md:px-10 py-8 border-b border-line flex items-center justify-between relative">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/spaces')} className="font-mono text-[12px] text-muted hover:text-ink">←</button>
-            <span className="w-3 h-3 rounded-full border-2" style={{ borderColor: space?.color || '#2E5BFF' }} />
-            <h1 className="font-serif italic text-[28px] text-ink">{space?.name || '…'}</h1>
-          </div>
+      <div className="relative z-10 flex min-h-screen overflow-x-hidden max-w-[1440px] mx-auto">
+        <Sidebar />
 
-          <div className="relative">
-            <button
-              onClick={() => setShowSettings(s => !s)}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F0EFE9] transition-colors text-muted"
-            >
-              ⌄
-            </button>
-            <AnimatePresence>
-              {showSettings && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  className="absolute right-0 top-10 bg-white border border-line rounded-md shadow-lg p-4 w-60 z-20"
-                >
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Change color</p>
-                  <ColorPicker value={space?.color} onChange={c => updateColorMutation.mutate(c)} />
-                  <button
-                    onClick={handleDeleteSpace}
-                    className="w-full mt-4 font-mono text-[11px] uppercase tracking-wide text-white bg-red-600 hover:bg-red-700 py-2 rounded-full transition-colors"
-                  >
-                    Delete Space
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        <main className="px-6 md:px-10 py-8">
-          {!itemsQuery.isLoading && items.length === 0 ? (
-            <div className="py-24 text-center">
-              <p className="font-serif italic text-[20px] mb-2">This space is empty.</p>
-              <p className="text-[14px] text-muted">
-                Add items to this space from the save dialog or the detail panel.
-              </p>
+        <main className="relative z-10 flex-1 pt-[26px] pr-6 pb-10 min-w-0 pl-10" data-purpose="main-feed">
+          <div className="flex justify-between items-center mb-12 relative">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/spaces')}
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 transition-colors group back-btn"
+              >
+                <svg className="transition-transform group-hover:-translate-x-1" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" width="24">
+                  <path d="M19 12H5M12 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+              <span
+                className="w-5 h-5 rounded-full border-2 border-black shrink-0"
+                style={{ backgroundColor: space?.color || '#2E5BFF' }}
+              />
+              <h1 className="text-[48px] font-bold font-roc leading-none text-black">{space?.name || '…'}</h1>
             </div>
-          ) : (
-            <MasonryGrid
-              items={items}
-              onCardClick={setSelectedItem}
-              onDelete={itemId => deleteMutation.mutate(itemId)}
-              onLoadMore={() => itemsQuery.fetchNextPage()}
-              hasMore={itemsQuery.hasNextPage}
-              isLoading={itemsQuery.isLoading}
-            />
-          )}
+
+            <div className="relative">
+              <button
+                onClick={() => setShowSettings(s => !s)}
+                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-black hover:bg-black hover:text-white transition-colors text-black font-bold text-[18px]"
+              >
+                ⚙
+              </button>
+              <AnimatePresence>
+                {showSettings && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="absolute right-0 top-12 bg-white border-2 border-black rounded-[8px] shadow-[4px_4px_0px_black] p-4 w-60 z-20"
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-gray-500 mb-2">Change color</p>
+                    <ColorPicker value={space?.color} onChange={c => updateColorMutation.mutate(c)} />
+                    <button
+                      onClick={handleDeleteSpace}
+                      className="w-full mt-4 font-mono text-[11px] uppercase tracking-wide text-white bg-[#f74700] hover:bg-red-700 py-2 border-2 border-black rounded-[4px] shadow-[2px_2px_0px_black] hover:shadow-none translate-y-[-2px] hover:translate-y-0 active:translate-y-[2px] transition-all"
+                    >
+                      Delete Space
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <div className="border-t border-black pt-8 min-h-[400px]">
+            {!itemsQuery.isLoading && items.length === 0 ? (
+              <div className="py-24 text-center">
+                <p className="font-serif italic text-[20px] mb-2 text-black">This space is empty.</p>
+                <p className="text-[14px] text-gray-600">
+                  Add items to this space from the save dialog or the detail panel.
+                </p>
+              </div>
+            ) : (
+              <MasonryGrid
+                items={items}
+                onCardClick={setSelectedItem}
+                onDelete={itemId => deleteMutation.mutate(itemId)}
+                onLoadMore={() => itemsQuery.fetchNextPage()}
+                hasMore={itemsQuery.hasNextPage}
+                isLoading={itemsQuery.isLoading}
+              />
+            )}
+          </div>
         </main>
       </div>
 

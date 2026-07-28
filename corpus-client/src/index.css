@@ -4,8 +4,213 @@
 
 @layer base {
   html { scroll-behavior: smooth; }
-  body { @apply bg-paper text-ink antialiased; }
+  body {
+    background-color: #f0e3d9;
+    font-family: 'Circular Std', 'Inter', system-ui, -apple-system, sans-serif;
+    @apply text-ink antialiased;
+  }
   ::selection { @apply bg-accent/20; }
+}
+
+/* Background grid overlay */
+.bg-grid-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='27.2' height='27.2'%3E%3Cpath d='M0 0 L27.2 0 L27.2 27.2' fill='none' stroke='%23000' stroke-width='0.5' stroke-opacity='0.15'/%3E%3C/svg%3E");
+  background-size: 27.2px 27.2px;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+.main-border {
+  border: 1px solid rgb(94, 94, 94);
+}
+
+/* Side Nav Wavy Animation Updated for Reversible Stagger */
+.wave-container svg {
+  transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+  will-change: transform;
+  transform: translateY(108%);
+}
+
+/* Default (Leave) Delays - Reversed Order (70ms stagger) */
+.side-nav-card .wave-layer-0 svg { transition-delay: 210ms; }
+.side-nav-card .wave-layer-1 svg { transition-delay: 140ms; }
+.side-nav-card .wave-layer-2 svg { transition-delay: 70ms; }
+.side-nav-card .wave-layer-3 svg { transition-delay: 0ms; }
+
+/* Hover Delays - Forward Order (120ms stagger) */
+.side-nav-card:hover .wave-layer-0 svg { transform: translateY(0%); transition-delay: 0ms; }
+.side-nav-card:hover .wave-layer-1 svg { transform: translateY(0%); transition-delay: 120ms; }
+.side-nav-card:hover .wave-layer-2 svg { transform: translateY(0%); transition-delay: 240ms; }
+.side-nav-card:hover .wave-layer-3 svg { transform: translateY(0%); transition-delay: 360ms; }
+
+/* Transition text and icon colors on hover */
+.side-nav-card .nav-content {
+  transition: color 0.4s ease;
+}
+.side-nav-card:hover .nav-content,
+.side-nav-card[data-active="true"] .nav-content {
+  color: black !important;
+}
+.side-nav-card .nav-icon {
+  transition: stroke 0.4s ease;
+}
+.side-nav-card:hover .nav-icon,
+.side-nav-card[data-active="true"] .nav-icon {
+  stroke: black !important;
+}
+
+/* Sidebar Background Transition */
+aside { transition: background-color 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+aside[data-view-active="tags"] { background-color: #259d27 !important; }
+aside[data-view-active="spaces"] { background-color: #faa200 !important; }
+
+/* Active State Borders */
+.side-nav-card[data-active="true"] { border: 2px solid black; }
+
+/* Memory Card Grid Reveal */
+.memory-card .grid-reveal {
+  background-image: linear-gradient(rgba(0,0,0,0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.055) 1px, transparent 1px);
+  background-size: 27px 27px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.memory-card:hover .grid-reveal {
+  opacity: 1;
+}
+
+/* Search Heading Hover Effects */
+.search-heading span {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease;
+  display: inline-block;
+  white-space: pre;
+}
+.search-heading:hover span:nth-child(1) { transform: translateY(-6px); color: black; }
+.search-heading:hover span:nth-child(2) { transform: translateY(-3px); color: black; transition-delay: 65ms; }
+.search-heading:hover span:nth-child(3) { transform: translateY(-5px); color: #f74700; transition-delay: 130ms; }
+.search-heading:hover span:nth-child(4) { transform: translateY(-7px); color: #faa200; transition-delay: 195ms; }
+
+/* Neubrutalist Filter Buttons */
+.filter-btn {
+  transition: all 0.15s ease-in-out;
+  border: 2px solid black;
+}
+
+.filter-btn[data-active="true"] {
+  background-color: black !important;
+  color: white !important;
+  transform: translate(3px, 3px);
+  box-shadow: none !important;
+}
+
+.filter-btn[data-active="false"] {
+  box-shadow: 3px 3px 0px black;
+}
+.filter-btn[data-active="false"]:hover {
+  box-shadow: none;
+  transform: translate(3px, 3px);
+}
+
+/* Modal Animation States */
+.view-content {
+  animation: floatUp 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+@keyframes floatUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Input Focus States */
+.input-focus-link:focus { border-color: #0d5ddf !important; box-shadow: 0 0 0 3px rgba(13, 93, 223, 0.1); }
+.input-focus-note:focus { border-color: #f74700 !important; box-shadow: 0 0 0 3px rgba(247, 71, 0, 0.1); }
+.input-focus-quote:focus { border-color: #259d27 !important; box-shadow: 0 0 0 3px rgba(37, 157, 39, 0.1); }
+.input-focus-image:focus { border-color: #faa200 !important; box-shadow: 0 0 0 3px rgba(250, 162, 0, 0.1); }
+
+/* Saving Animation */
+@keyframes pulse-saving {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+.is-saving {
+  animation: pulse-saving 1s infinite ease-in-out;
+  pointer-events: none;
+}
+
+#sidebar-save-btn {
+  background-color: white;
+  border-color: #0d5ddf;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+#sidebar-save-btn:hover {
+  background-color: #0d5ddf;
+}
+#sidebar-save-btn:hover #save-btn-text {
+  color: white;
+}
+#sidebar-save-btn.is-saving {
+  background-color: white !important;
+  border-color: #0d5ddf !important;
+}
+#sidebar-save-btn.is-saving #save-btn-text {
+  color: #0d5ddf !important;
+}
+
+/* Space Stacked Card Logic */
+.space-stack {
+  position: relative;
+  cursor: pointer;
+}
+.stack-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid black;
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.layer-3 { transform: translate(12px, 12px); z-index: 10; }
+.layer-2 { transform: translate(6px, 6px); z-index: 20; }
+.layer-1 { position: relative; z-index: 30; }
+
+.space-stack:hover .layer-3 { transform: translate(24px, 24px); }
+.space-stack:hover .layer-2 { transform: translate(12px, 12px); }
+.space-stack:hover .layer-1 { transform: translate(-4px, -4px); }
+
+/* Circular Badge Rotation */
+@keyframes rotateText {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.learn-more-badge {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  z-index: 40;
+}
+.space-stack:hover .learn-more-badge {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+.badge-svg {
+  animation: rotateText 10s linear infinite;
+}
+
+/* Custom fonts definitions */
+.font-roc {
+  font-family: 'Roc Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+}
+.font-circular {
+  font-family: 'Circular Std', 'Inter', system-ui, -apple-system, sans-serif;
+}
+.font-sans-fallback {
+  font-family: 'Circular Std', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* required by AIGradientBorder for the glow-spill effect */
@@ -21,4 +226,241 @@
 .corpus-dot-grid {
   background-image: radial-gradient(circle, rgba(46,91,255,0.12) 1px, transparent 1px);
   background-size: 22px 22px;
+}
+
+/* ===== LANDING PAGE STYLES ===== */
+
+/* Landing page body font */
+.landing-body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: #fff8f4;
+}
+
+/* Logo font */
+.corpus-logo-font {
+  font-family: serif;
+  font-weight: 900;
+  font-style: italic;
+  font-size: 2.5rem;
+  letter-spacing: -0.05em;
+}
+
+/* Landing grid overlay */
+.landing-grid-overlay {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Animated hero cards */
+.card {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 4px;
+  will-change: transform, width, height, top, left, right, bottom;
+}
+.cat-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Bento Gallery */
+.bento-container {
+  display: flex;
+  gap: 24px;
+  height: 85vh;
+  padding: 0 5vw;
+  align-items: stretch;
+}
+.bento-panel {
+  border-radius: 48px;
+  border: 2px solid rgba(0,0,0,0.1);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+.bento-panel-large { width: 750px; }
+.bento-panel-medium { width: 550px; }
+.bento-panel-small { width: 450px; }
+.bento-grid-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+}
+.bento-list-item {
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding: 16px 0;
+}
+.bento-list-item:last-child {
+  border-bottom: none;
+}
+
+/* Stacking Cards */
+.sticky-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 2rem;
+  height: 80vh;
+  width: 100%;
+  border: 2px solid black;
+  border-radius: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+   
+  padding: 4rem;
+  will-change: transform;
+}
+.sticky-cards-container {
+  position: relative;
+  height: 80vh;
+  width: 100%;
+  max-width: 1280px;
+  padding: 4rem; 
+  bottom: 1rem;
+  
+}
+
+/* Grid animated bg for pricing */
+.grid-bg-animated {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  animation: grid-move 4s linear infinite;
+}
+@keyframes grid-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 24px; }
+}
+
+/* Neubrutalist card */
+.neubrutalist-card {
+  background: white;
+  border: 3px solid #000;
+  box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: visible;
+}
+.neubrutalist-card::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 48px;
+  height: 48px;
+  background: #fff8f4;
+  border-bottom: 3px solid #000;
+  border-left: 3px solid #000;
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  z-index: 10;
+}
+.neubrutalist-card:hover {
+  transform: translate(-4px, -4px) scale(1.02);
+  box-shadow: 12px 12px 0px 0px rgba(0,0,0,1);
+}
+
+/* Neubrutalist button */
+.neubrutalist-button {
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+  transition: all 0.1s ease;
+}
+.neubrutalist-button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
+}
+.neubrutalist-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px 0px rgba(0,0,0,1);
+}
+
+/* Marquee hover pause */
+.marquee-container:hover .animate-marquee-left,
+.marquee-container:hover .animate-marquee-right {
+  animation-play-state: paused;
+}
+
+/* Material symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Footer interactive grid */
+#interactive-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  border-top: 1px solid rgba(0,0,0,0.1);
+  border-left: 1px solid rgba(0,0,0,0.1);
+  background-color: #fff8f4;
+  user-select: none;
+  touch-action: none;
+}
+.footer-grid-cell {
+  aspect-ratio: 1;
+  border-right: 1px solid rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(0,0,0,0.3);
+  cursor: crosshair;
+  transition: background-color 300ms ease;
+}
+
+/* Process cards */
+.process-card {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+}
+.process-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 12px 12px 0px 0px rgba(0,0,0,1);
+}
+.process-card:hover .roman-numeral-bg {
+  opacity: 1;
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Sidebar Layout */
+@media (min-width: 1024px) {
+  .landing-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 156px;
+    z-index: 100;
+    border-right: 2px solid black;
+  }
+  .landing-main-content {
+    margin-left: 156px;
+    width: calc(100% - 156px);
+  }
+}
+@media (max-width: 1023px) {
+  .landing-sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: column;
+    padding: 1rem;
+    border-right: 0;
+    border-bottom: 2px solid black;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .landing-sidebar .sidebar-nav-item {
+    height: 60px !important;
+  }
+  .landing-main-content {
+    width: 100%;
+  }
+}
+
+.sidebar-nav-item {
+  transition: transform 0.1s ease;
+}
+.sidebar-nav-item:hover {
+  transform: translateX(4px);
 }

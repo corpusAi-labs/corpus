@@ -1,60 +1,57 @@
-import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 
 export default function SpaceCard({ space }) {
   const navigate = useNavigate()
-  const previews = space.previewItems || []
+  const color = space.color || '#5EEAD4'
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -3 }}
-      transition={{ duration: 0.3 }}
+    <div
       onClick={() => navigate(`/spaces/${space._id}`)}
-      className="cursor-pointer flex flex-col items-center w-44"
+      className="space-stack h-[180px] w-full max-w-[340px] group relative"
     >
-      <div className="relative w-32 h-32 flex items-center justify-center mb-3">
-        {previews.length === 0 ? (
-          <div
-            className="w-28 h-28 rounded-full flex items-center justify-center border-2"
-            style={{ borderColor: space.color + '55', backgroundColor: space.color + '14' }}
-          >
-            <span className="font-serif italic text-[12px] text-center px-3 leading-tight" style={{ color: space.color }}>
-              Empty<br/>Space
-            </span>
-          </div>
-        ) : (
-          <>
-            {previews[1] && (
-              <div className="absolute w-20 h-26 rounded-sm bg-white border border-line shadow-sm transform -rotate-6 translate-x-3 overflow-hidden">
-                {previews[1].thumbnailUrl
-                  ? <img src={previews[1].thumbnailUrl} className="w-full h-full object-cover" alt=""/>
-                  : <div className="w-full h-full" style={{ backgroundColor: space.color + '22' }} />}
-              </div>
-            )}
-            {previews[0] && (
-              <div className="absolute w-20 h-26 rounded-sm bg-white border border-line shadow-md transform rotate-3 -translate-x-2 overflow-hidden z-10">
-                {previews[0].thumbnailUrl
-                  ? <img src={previews[0].thumbnailUrl} className="w-full h-full object-cover" alt=""/>
-                  : <div className="w-full h-full flex items-center justify-center p-2" style={{ backgroundColor: space.color + '18' }}>
-                      <span className="font-serif text-[10px] text-center line-clamp-3" style={{ color: space.color }}>
-                        {previews[0].title}
-                      </span>
-                    </div>}
-              </div>
-            )}
-          </>
-        )}
+      {/* Stacked layers (behind) */}
+      <div
+        className="stack-layer layer-3 opacity-0 group-hover:opacity-100"
+        style={{ backgroundColor: color }}
+      ></div>
+      <div
+        className="stack-layer layer-2 opacity-0 group-hover:opacity-100"
+        style={{ backgroundColor: color }}
+      ></div>
+
+      {/* Main card layer (front) */}
+      <div
+        className="stack-layer layer-1 p-6 flex flex-col justify-between"
+        style={{ backgroundColor: color }}
+      >
+        <div className="relative">
+          <h2 className="text-[22px] font-roc font-bold uppercase flex items-center gap-3 truncate text-black">
+            <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" width="20">
+              <path d="M5 12h14M12 5l7 7-7 7"></path>
+            </svg>
+            <span className="truncate">{space.name}</span>
+          </h2>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-black/60 block mt-1">
+            {space.itemCount || 0} item{space.itemCount !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div className="bg-white border-2 border-black py-2 text-center text-[11px] font-bold font-circular uppercase tracking-widest hover:bg-black hover:text-white transition-colors text-black">
+          SEE ALL
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="w-3 h-3 rounded-full border-2" style={{ borderColor: space.color }} />
-        <span className="font-serif text-[15px] text-ink">{space.name}</span>
+      {/* Rotating Badge on Hover */}
+      <div className="learn-more-badge pointer-events-none">
+        <svg className="badge-svg w-full h-full" viewBox="0 0 100 100">
+          <path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="none" />
+          <text className="text-[7px] font-bold fill-black font-circular tracking-[0.12em] uppercase">
+            <textPath href="#circlePath">
+              EXPLORE SPACE • EXPLORE SPACE • 
+            </textPath>
+          </text>
+        </svg>
       </div>
-      {space.itemCount > 0 && (
-        <span className="font-mono text-[10px] text-muted mt-0.5">{space.itemCount} item{space.itemCount !== 1 ? 's' : ''}</span>
-      )}
-    </motion.div>
+    </div>
   )
 }

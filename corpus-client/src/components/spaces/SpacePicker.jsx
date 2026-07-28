@@ -18,29 +18,34 @@ export default function SpacePicker({ value, onChange }) {
   }, [])
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative group z-50" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 font-mono text-[11px] border border-line rounded-full px-3 py-1.5 hover:border-ink/30 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-black text-[12px] font-bold font-circular text-black hover:bg-gray-50 transition-all active:translate-x-[1px] active:translate-y-[1px] shadow-[2px_2px_0px_black] hover:shadow-none bg-white select-none"
       >
         {selected ? (
           <>
-            <span className="w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: selected.color }} />
-            <span className="text-ink">{selected.name}</span>
+            <span className="w-2 h-2 rounded-full border border-black shrink-0" style={{ backgroundColor: selected.color }} />
+            <span className="truncate max-w-[100px]">{selected.name}</span>
           </>
         ) : (
-          <span className="text-muted">No space</span>
+          <span className="">No space</span>
         )}
-        <span className="text-muted text-[9px]">⌄</span>
+        <svg fill="none" height="6" viewBox="0 0 10 6" width="10" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+        </svg>
       </button>
 
       {open && (
-        <div className="absolute left-0 top-9 bg-white border border-line rounded-md shadow-lg w-48 py-1.5 z-30 max-h-56 overflow-y-auto">
+        <div className="absolute right-0 mt-2 w-48 bg-white border-2 border-black rounded-[8px] shadow-[4px_4px_0px_black] z-[110] overflow-hidden py-1">
+          <div className="px-4 py-2 text-[11px] font-roc uppercase tracking-wider text-gray-400 border-b border-gray-100 select-none">
+            Select Space
+          </div>
           <button
             type="button"
             onClick={() => { onChange(null); setOpen(false) }}
-            className="w-full text-left px-3 py-1.5 font-mono text-[11px] text-muted hover:bg-[#F0EFE9] transition-colors"
+            className="w-full text-left px-4 py-2 text-[12px] font-circular hover:bg-gray-100 transition-colors text-black"
           >
             No space
           </button>
@@ -49,14 +54,14 @@ export default function SpacePicker({ value, onChange }) {
               key={s._id}
               type="button"
               onClick={() => { onChange(s._id); setOpen(false) }}
-              className="w-full text-left px-3 py-1.5 flex items-center gap-2 font-mono text-[11px] text-ink hover:bg-[#F0EFE9] transition-colors"
+              className="w-full text-left px-4 py-2 flex items-center gap-2 font-circular hover:bg-gray-100 transition-colors text-black"
             >
-              <span className="w-2.5 h-2.5 rounded-full border-2 shrink-0" style={{ borderColor: s.color }} />
+              <span className="w-2 h-2 rounded-full border border-black shrink-0" style={{ backgroundColor: s.color }} />
               <span className="truncate">{s.name}</span>
             </button>
           ))}
           {spaces.length === 0 && (
-            <p className="px-3 py-2 font-mono text-[10px] text-muted">No spaces yet</p>
+            <p className="px-4 py-2 font-circular text-[10px] text-gray-400 select-none">No spaces yet</p>
           )}
         </div>
       )}

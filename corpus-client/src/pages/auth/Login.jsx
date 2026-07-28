@@ -23,19 +23,21 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen relative flex items-center justify-center px-4">
+      {/* Background grid overlay */}
+      <div className="fixed inset-0 pointer-events-none bg-grid-overlay z-0" data-purpose="background-pattern"></div>
 
-        <div className="mb-10 text-center">
-          <Link to="/" className="font-serif text-2xl text-ink">Corpus</Link>
-          <p className="font-mono text-[11px] text-muted mt-1 uppercase tracking-wider">
-            sign in to your archive
+      <div className="relative z-10 w-full max-w-sm bg-white border-2 border-black rounded-[10px] p-8 shadow-[6px_6px_0px_black] select-none">
+        <div className="mb-8 text-center">
+          <Link to="/" className="font-roc text-[36px] font-bold text-black leading-none">corpus.</Link>
+          <p className="font-circular text-[12px] text-gray-500 mt-2 uppercase tracking-widest font-bold">
+            Sign In
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="font-mono text-[11px] uppercase tracking-wider text-muted block mb-1.5">
+            <label className="font-circular text-[11px] uppercase tracking-wider text-gray-500 block mb-1.5 font-bold">
               Email
             </label>
             <input
@@ -44,13 +46,13 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-line rounded-sm px-4 py-2.5 text-[14px] bg-white focus:outline-none focus:border-ink/40 transition-colors"
+              className="w-full border-2 border-black rounded-[4px] px-4 py-3 text-[14px] font-circular bg-white focus:outline-none focus:ring-0 focus:border-[#0d5ddf] transition-all placeholder:text-gray-300 text-black"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="font-mono text-[11px] uppercase tracking-wider text-muted block mb-1.5">
+            <label className="font-circular text-[11px] uppercase tracking-wider text-gray-500 block mb-1.5 font-bold">
               Password
             </label>
             <input
@@ -58,31 +60,30 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-line rounded-sm px-4 py-2.5 text-[14px] bg-white focus:outline-none focus:border-ink/40 transition-colors"
+              className="w-full border-2 border-black rounded-[4px] px-4 py-3 text-[14px] font-circular bg-white focus:outline-none focus:ring-0 focus:border-[#0d5ddf] transition-all placeholder:text-gray-300 text-black"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p className="text-[12.5px] text-red-600">{error}</p>
+            <p className="text-[12.5px] text-red-600 font-circular">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-ink text-paper font-mono text-[12px] uppercase tracking-wide py-3 rounded-sm hover:bg-accent transition-colors disabled:opacity-50"
+            className="w-full bg-black text-white font-circular text-[13px] uppercase tracking-wider font-bold py-3.5 rounded-[4px] hover:bg-gray-900 border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,0.15)] active:scale-95 transition-all disabled:opacity-50 mt-2"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <p className="font-mono text-[11px] text-muted text-center mt-6">
+        <p className="font-circular text-[12px] text-gray-500 text-center mt-6">
           No account?{' '}
-          <Link to="/signup" className="text-ink underline underline-offset-2">
+          <Link to="/signup" className="text-black font-bold hover:underline">
             Create one
           </Link>
         </p>
-
       </div>
     </div>
   )
