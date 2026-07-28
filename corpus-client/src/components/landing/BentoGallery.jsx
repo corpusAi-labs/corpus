@@ -88,7 +88,7 @@ export default function BentoGallery() {
             </div>
           </div>
         </div>
-      </div>
+  
     </section>
   );
 }
