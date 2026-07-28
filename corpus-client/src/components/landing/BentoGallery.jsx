@@ -41,23 +41,23 @@ export default function BentoGallery() {
               <span className="text-[#f74700]">vault.</span>
             </h2>
             <p className="text-black/60 mt-8 text-xl max-w-sm leading-relaxed font-dm-sans">
-              A neubrutalist perspective on your digital heritage. One unit, an entire universe.
+              Your second memory for links, notes, and research. Save in two seconds—AI handles the rest.
             </p>
           </div>
           <div className="bento-container">
             <div className="bento-panel bento-panel-large bg-[#f74700] p-12 flex flex-col justify-end text-white">
               <div className="absolute top-10 left-10">
                 <span className="px-4 py-2 border border-white/30 rounded-full text-xs font-bold uppercase tracking-widest font-hanken">
-                  All-Inclusive Living
+                 ORGANIZATION ON AUTOPILOT
                 </span>
               </div>
               <h3 className="text-7xl font-black leading-[1.1] mb-6 font-hanken">
-                One Unit.<br />
-                An entire universe.
+                Save anything.<br />
+                Find everything.
               </h3>
-              <p className="text-2xl font-bold mb-4 font-dm-sans">Your rent covers everything</p>
+              <p className="text-2xl font-bold mb-4 font-dm-sans">No tags, no folders, zero manual effort</p>
               <p className="text-white/80 leading-relaxed text-base max-w-md font-dm-sans">
-                Each unit is its own universe, combining spaces and services for effortless, all-inclusive student living.
+                Drop in any link, note, quote, or image. Corpus instantly reads, tags, and files it away using AI—so you can search naturally whenever you need it again.
               </p>
             </div>
             <div className="bento-panel bento-panel-medium">
@@ -69,20 +69,19 @@ export default function BentoGallery() {
             </div>
             <div className="bento-grid-col bento-panel-small font-dm-sans">
               <div className="flex-1 bento-panel bg-[#9439f9] p-10 text-white">
-                <h4 className="text-3xl font-black mb-1 font-hanken">Community spaces</h4>
+                <h4 className="text-3xl font-black mb-1 font-hanken">Spaces & Organization</h4>
                 <p className="text-xs font-bold opacity-70 mb-6 uppercase tracking-wider font-hanken">
-                  Open access, 24/7
+                  STRUCTURED WHEN YOU WANT IT
                 </p>
-                <div className="space-y-4">
-                  <div className="bento-list-item text-lg">Fully equipped gym</div>
-                  <div className="bento-list-item text-lg">Laundry room</div>
+                <div className="space-y-4">Dedicated archives for projects, research, and interest</div>
+                  <div className="bento-list-item text-lg">Custom names and colors to keep ideas visually distinct</div>
                 </div>
               </div>
               <div className="h-[35%] bento-panel bg-[#259d27] flex items-center justify-center p-8">
                 <div className="text-white text-center">
-                  <div className="text-5xl font-black italic font-hanken">100%</div>
+                  <div className="text-5xl font-black italic font-hanken">100</div>
                   <div className="text-[12px] font-bold uppercase tracking-widest opacity-80 font-hanken">
-                    Private Storage
+                    FREE SAVES TO START
                   </div>
                 </div>
               </div>
