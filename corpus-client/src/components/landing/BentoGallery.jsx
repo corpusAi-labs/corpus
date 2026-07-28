@@ -74,7 +74,7 @@ export default function BentoGallery() {
                 <img
                   alt="Archive Visual"
                   className="w-full h-full object-cover"
-                  src="src/public/images/bento1.png"
+                  src="/images/bento1.png"
                 />
               </div>
 
@@ -95,7 +95,7 @@ export default function BentoGallery() {
               <img
                 alt="Textures"
                 className="w-full h-full object-cover"
-                src="src/public/images/bento2.png"
+                src="/images/bento2.png"
               />
             </div>
 
