@@ -4,7 +4,7 @@
 
 Corpus (a.k.a. "mymind") is a full-stack personal knowledge management app. Save links, notes, and images from anywhere on the web, and let AI organize them for you — so nothing you find ever gets lost again.
 
-![Corpus Banner](./assets/banner.png)
+
 
 ---
 
@@ -21,18 +21,18 @@ Corpus (a.k.a. "mymind") is a full-stack personal knowledge management app. Save
 ---
 
 ## 📸 Screenshots
-
+ 
 ### Web App — Dashboard
-![Dashboard](./assets/dashboard.png)
-
-### tags
-![search by Tags](./assets/tags.png)
-
+![Dashboard](./dashboard.png)
+ 
+### Tags Search
+![tags](./tags.png)
+ 
 ### Spaces
-![Spaces](./assets/spaces.png)
-
+![Spaces](./spaces.png)
+ 
 ### Drift Mode
-![Drift Mode](./assets/drift.png)
+![Drift Mode](./drift.png)
 
 ---
 
