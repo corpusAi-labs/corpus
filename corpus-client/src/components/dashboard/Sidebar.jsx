@@ -1,14 +1,11 @@
 import { useAuth } from '../../hooks/useAuth.js'
 import { useNavigate, useLocation } from 'react-router-dom'
-import useAuthStore from '../../store/authStore.js'
 
 export default function Sidebar({ onOpenComposer }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const credits = useAuthStore(s => s.credits)
-
-  const creditsLeft = credits ?? user?.credits ?? 0
+  const creditsLeft = user?.credits ?? 0
 
   // Determine active view to set data-view-active
   const queryParams = new URLSearchParams(location.search)

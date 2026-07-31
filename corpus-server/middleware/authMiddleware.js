@@ -1,12 +1,5 @@
 import jwt from 'jsonwebtoken'
 
-/**
- * Protects routes by verifying the JWT access token in the
- * Authorization: Bearer <token> header.
- *
- * On success: attaches req.user = { id } and calls next().
- * On failure: returns 401 so the client can attempt a refresh.
- */
 export function authMiddleware(req, res, next) {
   const header = req.headers.authorization
   if (!header || !header.startsWith('Bearer ')) {
@@ -21,7 +14,7 @@ export function authMiddleware(req, res, next) {
     next()
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired.' })
+      return res.status(401).json({ error: 'Token expired. Please log in again.' })
     }
     return res.status(401).json({ error: 'Invalid token.' })
   }

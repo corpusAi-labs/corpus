@@ -19,11 +19,6 @@ export async function getMeApi() {
   return data
 }
 
-export async function refreshApi() {
-  const { data } = await api.post('/auth/refresh')
-  return data
-}
-
 export async function getCredits() {
   const { data } = await api.get('/auth/me')
   return data

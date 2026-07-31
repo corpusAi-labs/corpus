@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import axios from 'axios'
 import useAuthStore from '../store/authStore.js'
+import { getToken, clearSession } from '../utils/authStorage.js'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
 
@@ -12,26 +13,27 @@ export default function AuthInit({ children }) {
     if (ran.current) return
     ran.current = true
 
-    async function restore() {
+    async function restoreSession() {
+      const token = getToken()
+      if (!token) {
+        clearAuth()
+        return
+      }
+
       try {
-        const { data: refreshData } = await axios.post(
-          `${BASE}/auth/refresh`,
-          {},
-          { withCredentials: true, timeout: 5000 }
-        )
-        const { data: meData } = await axios.get(`${BASE}/auth/me`, {
-          headers: { Authorization: `Bearer ${refreshData.accessToken}` },
-          withCredentials: true,
-          timeout: 5000,
+        const { data } = await axios.get(`${BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
         })
-        setAuth(meData.user, refreshData.accessToken)
+        setAuth(data.user, token)
       } catch {
+        clearSession()
         clearAuth()
       }
     }
 
-    restore()
-  }, [])
+    restoreSession()
+  }, [setAuth, clearAuth])
 
   return children
 }

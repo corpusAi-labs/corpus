@@ -21,8 +21,12 @@ app.use(helmet())
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow no-origin requests (curl, server-to-server) and known origins
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      // allow no-origin requests (curl, Chrome extension) and known origins
+      if (
+        !origin ||
+        ALLOWED_ORIGINS.includes(origin) ||
+        origin.startsWith('chrome-extension://')
+      ) {
         callback(null, true)
       } else {
         callback(new Error('Not allowed by CORS'))

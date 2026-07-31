@@ -2,21 +2,21 @@ import { create } from 'zustand'
 
 const useAuthStore = create((set) => ({
   user: null,
-  accessToken: null,
+  token: null,
   isLoading: true,
-  credits: null,
 
-  setAuth: (user, accessToken) => set({
+  setAuth: (user, token) => set({
     user,
-    accessToken,
+    token,
     isLoading: false,
-    credits: user?.credits ?? null,
   }),
+
   setCredits: (credits) => set((s) => ({
-    credits,
     user: s.user ? { ...s.user, credits } : s.user,
   })),
-  clearAuth: () => set({ user: null, accessToken: null, isLoading: false, credits: null }),
+
+  clearAuth: () => set({ user: null, token: null, isLoading: false }),
+
   setLoading: (isLoading) => set({ isLoading }),
 }))
 
