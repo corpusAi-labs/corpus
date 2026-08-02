@@ -2,47 +2,62 @@ import { useNavigate } from 'react-router-dom';
 
 const PLANS = [
   {
-    name: 'Hover Lite',
+    name: 'Corpus Lite',
     price: '₹199',
-    period: '/forever',
+    period: '/month',
     color: '#0d5ddf',
     features: [
-      'Access to 200+ components',
-      'Basic templates',
-      'Community support',
+      '500 saves per month',
+      'AI tagging + TLDR',
+      'All save types (link, note, quote, image)',
       'Regular updates',
+      'Semantic search',
+       'Up to 25 Spaces'
     ],
-    cta: 'Purchase Hover Lite',
+    cta: 'Purchase Corpus Lite',
     highlight: false,
   },
   {
-    name: 'Hover Pro',
+    name: 'Corpus Pro',
     price: '₹499',
     period: '',
     color: '#0d5ddf',
     features: [
-      'Lifetime access',
-      'All inclusive',
-      'Current & future',
-      'Priority suggestions',
-      'Modern tech',
+       '2,000 saves per month',
+
+        'AI tagging + TLDR',
+        
+        'All save types + browser extension',
+          
+        'Semantic search',
+        
+        'Unlimited Spaces',
+        
+        'Priority AI processing',
     ],
-    cta: 'Purchase Hover Pro',
+    cta: 'Purchase Corpus Pro',
     highlight: true,
   },
   {
-    name: 'Hover Team',
+    name: 'Corpus Team',
     price: '₹999',
     period: '',
     color: '#0d5ddf',
     features: [
       'Everything in Pro',
-      'Team access (up to 10 seats)',
+      'Unlimited saves',
+      'AI tagging + TLDR',
+      'All save types + browser extension',
+      'Semantic search',
+      'Unlimited Spaces',
+      'Priority AI processing',
+      'Export archive (JSON/CSV)',
       'Shared library & cloud sync',
+      'Team access (up to 10 seats)',
       'Priority support',
       'Early access to new features',
     ],
-    cta: 'Purchase Hover Team',
+    cta: 'Purchase Corpus Team',
     highlight: false,
   },
 ];

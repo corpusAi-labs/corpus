@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { FiTrash2, FiExternalLink } from 'react-icons/fi'
 import api from '../../api/axios.js'
 
+function truncate(text, max = 180) {
+  if (!text) return text
+  return text.length > max ? text.slice(0, max).trimEnd() + '...' : text
+}
+
 function timeAgo(d) {
   const s = Math.floor((Date.now() - new Date(d)) / 1000)
   if (s < 60) return 'just now'
@@ -154,8 +159,8 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
             <>
               {item.title && <h3 className="text-[13px] font-bold text-gray-900 font-roc line-clamp-2">{item.title}</h3>}
               {item.content && (
-                <p className="text-[12px] leading-relaxed text-gray-700 flex-1 line-clamp-4">
-                  {item.content}
+                <p className="text-[12px] leading-relaxed text-gray-700 flex-1">
+                  {truncate(item.content, 180)}
                 </p>
               )}
             </>
@@ -165,7 +170,7 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
             <>
               {item.content && (
                 <blockquote className="text-[12px] italic text-gray-800 leading-relaxed flex-1 font-roc border-l-2 border-gray-200 pl-2">
-                  "{item.content}"
+                  "{truncate(item.content, 180)}"
                 </blockquote>
               )}
               {item.title && <span className="text-[11px] text-gray-400 font-circular block">— {item.title}</span>}
@@ -176,7 +181,7 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
           {type !== 'link' && type !== 'image' && type !== 'note' && type !== 'quote' && (
             <>
               {item.title && <h3 className="text-[13px] font-bold text-gray-900 font-roc">{item.title}</h3>}
-              {item.content && <p className="text-[12px] leading-relaxed text-gray-700 flex-1">{item.content}</p>}
+              {item.content && <p className="text-[12px] leading-relaxed text-gray-700 flex-1">{truncate(item.content, 180)}</p>}
             </>
           )}
         </div>
