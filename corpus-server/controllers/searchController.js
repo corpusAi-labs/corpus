@@ -1,130 +1,165 @@
 import Item from '../models/Item.js'
-import { parseQuery } from '../services/searchParser.js'
+
+function escapeRegex(string) {
+  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+}
 
 /**
- * Smart search — supports:
- * - Full text across title, content, summary, tags, note, url
- * - tag:design  site:youtube.com  type:youtube  type:note
- * - -exclude  "exact phrase"  word1 || word2
- * - yesterday  last week  last month
- * - Fuzzy fallback: if text search returns 0 results, tries regex on title/content
+ * Escapes regex and splits query string into terms.
+ */
+export function buildSearchQuery(q) {
+  if (!q) return []
+  return q.trim().split(/\s+/).filter(Boolean)
+}
+
+/**
+ * Simple plain text search with relevance ranking.
+ *
+ * Query syntax:
+ *   GET /api/items/search?q=search+terms&sort=newest
  */
 export async function smartSearch(req, res) {
-  const raw = (req.query.q || '').trim()
-  if (!raw) return res.json({ items: [], parsed: {} })
+  const q = (req.query.q || '').trim()
+  const sort = req.query.sort || 'newest'
+  const sortDirection = sort === 'oldest' ? 1 : -1
+
+  const baseQuery = {
+    userId: req.user.id,
+    deletedAt: null,
+    archived: false,
+  }
 
   try {
-    const parsed = parseQuery(raw)
-    const baseQuery = {
-      userId: req.user.id,
-      deletedAt: null,
-      archived: false,
-    }
+    // ── EMPTY SEARCH ──
+    if (!q) {
+      const limit = Math.min(parseInt(req.query.limit) || 20, 50)
+      const { cursor, type, tag, spaceId } = req.query
+      const query = { ...baseQuery }
 
-    // apply operator filters
-    if (parsed.tags.length) {
-      baseQuery.tags = { $all: parsed.tags }
-    }
-    if (parsed.site) {
-      baseQuery.url = { $regex: parsed.site, $options: 'i' }
-    }
-    if (parsed.contentTypes.length) {
-      baseQuery.contentType = { $in: parsed.contentTypes }
-    }
-    if (parsed.itemTypes.length) {
-      baseQuery.type = { $in: parsed.itemTypes }
-    }
-    if (parsed.dateFilter) {
-      baseQuery.createdAt = parsed.dateFilter
-    }
-
-    let items = []
-
-    // ── OR SEARCH ──
-    if (parsed.orTerms.length) {
-      const orConditions = parsed.orTerms.map(term => ({
-        $or: [
-          { title: { $regex: term, $options: 'i' } },
-          { content: { $regex: term, $options: 'i' } },
-          { summary: { $regex: term, $options: 'i' } },
-          { tags: { $regex: term, $options: 'i' } },
-          { note: { $regex: term, $options: 'i' } },
-        ]
-      }))
-      items = await Item.find({
-        ...baseQuery,
-        $or: orConditions.flatMap(c => c.$or),
-      }).sort({ createdAt: -1 }).limit(40)
-    }
-
-    // ── EXACT PHRASE ──
-    else if (parsed.exact) {
-      items = await Item.find({
-        ...baseQuery,
-        $or: [
-          { title: { $regex: parsed.exact, $options: 'i' } },
-          { content: { $regex: parsed.exact, $options: 'i' } },
-          { summary: { $regex: parsed.exact, $options: 'i' } },
-          { note: { $regex: parsed.exact, $options: 'i' } },
-        ]
-      }).sort({ createdAt: -1 }).limit(40)
-    }
-
-    // ── TEXT SEARCH WITH OPERATORS ONLY (no text term) ──
-    else if (!parsed.text && parsed.hasOperators) {
-      items = await Item.find(baseQuery)
-        .sort({ createdAt: -1 })
-        .limit(40)
-    }
-
-    // ── FULL TEXT + OPERATORS ──
-    else if (parsed.text) {
-      // build exclusion from -words
-      let searchText = parsed.text
-      if (parsed.exclude.length) {
-        searchText += ' ' + parsed.exclude.map(w => `-${w}`).join(' ')
+      if (type) query.type = type
+      if (tag) query.tags = tag
+      if (spaceId) query.spaceId = spaceId
+      if (cursor) {
+        query._id = sortDirection === -1 ? { $lt: cursor } : { $gt: cursor }
       }
 
-      // 1. MongoDB text search (weighted: title > tags > summary > content)
-      items = await Item.find(
-        { ...baseQuery, $text: { $search: searchText } },
-        { score: { $meta: 'textScore' } }
-      )
-        .sort({ score: { $meta: 'textScore' } })
-        .limit(40)
+      const items = await Item.find(query).sort({ _id: sortDirection }).limit(limit + 1)
+      const hasMore = items.length > limit
+      const page = hasMore ? items.slice(0, limit) : items
 
-      // 2. Fuzzy fallback — if text search returns nothing, try regex
-      if (items.length === 0) {
-        const terms = parsed.text.split(/\s+/).filter(t => t.length > 1)
-        const regexConditions = terms.map(term => ({
-          $or: [
-            { title: { $regex: term, $options: 'i' } },
-            { content: { $regex: term, $options: 'i' } },
-            { summary: { $regex: term, $options: 'i' } },
-            { tags: { $regex: term, $options: 'i' } },
-            { note: { $regex: term, $options: 'i' } },
-            { url: { $regex: term, $options: 'i' } },
-            { contentType: { $regex: term, $options: 'i' } },
-          ]
-        }))
+      return res.json({
+        items: page,
+        nextCursor: hasMore ? page[page.length - 1]._id : null,
+      })
+    }
 
-        if (regexConditions.length) {
-          items = await Item.find({
-            ...baseQuery,
-            $and: regexConditions,
-          })
-            .sort({ createdAt: -1 })
-            .limit(40)
+    // ── NON-EMPTY SEARCH ──
+    const terms = buildSearchQuery(q)
+    if (terms.length === 0) {
+      return res.json({ items: [] })
+    }
+
+    // Build the $or regex query to find any matching items
+    const orConditions = terms.flatMap(term => {
+      const escaped = escapeRegex(term)
+      const regex = new RegExp(escaped, 'i')
+      return [
+        { tags: { $regex: regex } },
+        { title: { $regex: regex } },
+        { summary: { $regex: regex } },
+        { note: { $regex: regex } },
+        { url: { $regex: regex } },
+        { content: { $regex: regex } }
+        
+      ]
+    })
+
+    const query = {
+      ...baseQuery,
+      $or: orConditions,
+    }
+
+    // Respect active filters during search if provided
+    if (req.query.type) query.type = req.query.type
+    if (req.query.tag) query.tags = req.query.tag
+    if (req.query.spaceId) query.spaceId = req.query.spaceId
+
+    // Retrieve matching candidates (up to 500)
+    const matchedItems = await Item.find(query).limit(500)
+
+    // Score candidates in memory
+    const ranked = matchedItems.map(item => {
+      let uniqueMatchedTerms = 0
+      let fieldScore = 0
+
+      for (const term of terms) {
+        const escaped = escapeRegex(term)
+        const regex = new RegExp(escaped, 'i')
+        let matchedThisTerm = false
+
+
+         // 1. Note (highest points as it was manual)
+        if (item.note && regex.test(item.note)) {
+          fieldScore += 11
+          matchedThisTerm = true
+        }
+
+        // 2. Tags (10 points)
+        const tagsMatch = (item.tags || []).some(t => regex.test(t))
+        if (tagsMatch) {
+          fieldScore += 10
+          matchedThisTerm = true
+        }
+
+        // 3. Title (8 points)
+        if (item.title && regex.test(item.title)) {
+          fieldScore += 8
+          matchedThisTerm = true
+        }
+
+        // 4. URL (1 point)
+        if (item.url && regex.test(item.url)) {
+          fieldScore += 5
+          matchedThisTerm = true
+        }
+
+        // 4. Summary (3 points)
+        if (item.summary && regex.test(item.summary)) {
+          fieldScore += 3
+          matchedThisTerm = true
+        }
+
+        // 6. Content (1 points)
+        if (item.content && regex.test(item.content)) {
+          fieldScore += 1
+          matchedThisTerm = true
+        }
+
+
+        if (matchedThisTerm) {
+          uniqueMatchedTerms++
         }
       }
-    }
 
-    // ── OPERATORS ONLY — already fetched above ──
-    // if still empty and user only used operators, baseQuery already handles it
+      // Relevance score weights matching more search terms highest
+      const score = (uniqueMatchedTerms * 100) + fieldScore
+      return { item, score }
+    })
 
-    return res.json({ items, parsed })
+    // Sort by relevance score primarily, and createdAt secondarily
+    ranked.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score
+      }
+      const timeA = new Date(a.item.createdAt).getTime()
+      const timeB = new Date(b.item.createdAt).getTime()
+      return sortDirection === 1 ? timeA - timeB : timeB - timeA
+    })
+
+    const finalItems = ranked.map(r => r.item).slice(0, 40)
+    return res.json({ items: finalItems })
   } catch (err) {
-    console.error('[search]', err.message)
+    console.error('[smartSearch]', err.message)
     return res.status(500).json({ error: 'Search failed', details: err.message })
   }
 }

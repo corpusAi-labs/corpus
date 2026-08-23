@@ -3,9 +3,23 @@ import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 import User from '../models/User.js'
 
-// Single token that lasts 30 days — user stays logged in without re-login
-function generateToken(userId) {
-  return jwt.sign({ id: userId }, process.env.ACCESS_SECRET, { expiresIn: '30d' })
+const isProd = process.env.NODE_ENV === 'production'
+
+function generateAccessToken(userId) {
+  return jwt.sign({ id: userId }, process.env.ACCESS_SECRET, { expiresIn: '15m' })
+}
+
+function generateRefreshToken(userId) {
+  return jwt.sign({ id: userId }, process.env.REFRESH_SECRET, { expiresIn: '7d' })
+}
+
+function setRefreshTokenCookie(res, token) {
+  res.cookie('refreshToken', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  })
 }
 
 function formatUser(user) {
@@ -33,9 +47,18 @@ export async function signup(req, res) {
     if (existing) return res.status(409).json({ error: 'An account with this email already exists.' })
     const passwordHash = await bcrypt.hash(password, 12)
     const user = await User.create({ name, email, passwordHash, credits: 100, plan: 'free' })
-    const token = generateToken(user._id)
+
+    const accessToken = generateAccessToken(user._id)
+    const refreshToken = generateRefreshToken(user._id)
+
+    user.refreshTokens = user.refreshTokens || []
+    user.refreshTokens.push(refreshToken)
+    await user.save()
+
+    setRefreshTokenCookie(res, refreshToken)
+
     return res.status(201).json({
-      token,
+      token: accessToken,
       user: formatUser(user),
     })
   } catch (err) {
@@ -58,9 +81,21 @@ export async function login(req, res) {
     if (!user || !user.passwordHash) return res.status(401).json({ error: 'Invalid email or password.' })
     const valid = await bcrypt.compare(password, user.passwordHash)
     if (!valid) return res.status(401).json({ error: 'Invalid email or password.' })
-    const token = generateToken(user._id)
+
+    const accessToken = generateAccessToken(user._id)
+    const refreshToken = generateRefreshToken(user._id)
+
+    user.refreshTokens = user.refreshTokens || []
+    user.refreshTokens.push(refreshToken)
+    if (user.refreshTokens.length > 10) {
+      user.refreshTokens = user.refreshTokens.slice(-10)
+    }
+    await user.save()
+
+    setRefreshTokenCookie(res, refreshToken)
+
     return res.json({
-      token,
+      token: accessToken,
       user: formatUser(user),
     })
   } catch (err) {
@@ -70,7 +105,22 @@ export async function login(req, res) {
 }
 
 export async function logout(req, res) {
-  // Client clears the token from localStorage — nothing to do on server
+  const refreshToken = req.cookies.refreshToken
+  if (refreshToken) {
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET)
+      await User.findByIdAndUpdate(decoded.id, { $pull: { refreshTokens: refreshToken } })
+    } catch (err) {
+      console.warn('[logout] token verification or database pull failed:', err.message)
+    }
+  }
+
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  })
+
   return res.json({ success: true })
 }
 
@@ -81,5 +131,41 @@ export async function getMe(req, res) {
     return res.json({ user: formatUser(user) })
   } catch {
     return res.status(500).json({ error: 'Failed to fetch user.' })
+  }
+}
+
+export async function refresh(req, res) {
+  const refreshToken = req.cookies.refreshToken
+  if (!refreshToken) {
+    return res.status(401).json({ error: 'Refresh token not found.' })
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET)
+    const user = await User.findById(decoded.id)
+    if (!user || !user.refreshTokens || !user.refreshTokens.includes(refreshToken)) {
+      return res.status(401).json({ error: 'Invalid or revoked refresh token.' })
+    }
+
+    const accessToken = generateAccessToken(user._id)
+    const newRefreshToken = generateRefreshToken(user._id)
+
+    // Rotate refresh token
+    user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken)
+    user.refreshTokens.push(newRefreshToken)
+    if (user.refreshTokens.length > 10) {
+      user.refreshTokens = user.refreshTokens.slice(-10)
+    }
+    await user.save()
+
+    setRefreshTokenCookie(res, newRefreshToken)
+
+    return res.json({
+      token: accessToken,
+      user: formatUser(user),
+    })
+  } catch (err) {
+    console.warn('[refresh] token verification failed:', err.message)
+    return res.status(401).json({ error: 'Invalid or expired refresh token.' })
   }
 }

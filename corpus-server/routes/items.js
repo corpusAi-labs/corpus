@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 import {
-  createItem, listItems, getItem, updateItem, deleteItem, driftItems, retryAI,
+  createItem, listItems, getItem, updateItem, deleteItem, driftItems, retryAI, listAllTags
 } from '../controllers/itemController.js'
 import { smartSearch } from '../controllers/searchController.js'
 
@@ -10,6 +10,7 @@ router.use(authMiddleware)
 
 router.get('/search', smartSearch)
 router.get('/drift', driftItems)
+router.get('/tags', listAllTags)
 router.get('/', listItems)
 router.post('/', createItem)
 router.get('/:id', getItem)
