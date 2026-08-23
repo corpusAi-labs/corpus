@@ -2,7 +2,7 @@
 
 > Your personal knowledge base — save anything, find it later.
 
-Corpus (a.k.a. "mymind") is a full-stack personal knowledge management app. Save links, notes, and images from anywhere on the web, and let AI organize them for you — so nothing you find ever gets lost again.
+Corpus is a full-stack personal knowledge management app. Save links, notes, and images from anywhere on the web, and let AI organize them for you — so nothing you find ever gets lost again.
 
 
 
