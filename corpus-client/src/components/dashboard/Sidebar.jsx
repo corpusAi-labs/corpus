@@ -45,7 +45,7 @@ export default function Sidebar({ onOpenComposer }) {
 
   return (
     <aside
-      className="flex flex-col gap-[14px] p-[18px] w-[158px] shrink-0 min-h-screen border-r border-black relative z-20"
+      className="flex flex-col gap-[14px] p-[18px] w-[158px] shrink-0 h-screen sticky top-0 border-r border-black relative z-20 overflow-y-auto scrollbar-none"
       data-purpose="sidebar-navigation"
       data-view-active={activeView}
       id="main-sidebar"

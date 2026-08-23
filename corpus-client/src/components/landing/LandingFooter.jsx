@@ -26,12 +26,20 @@ export default function LandingFooter() {
       const rows = Math.ceil(height / cellWidth);
       const totalCells = cols * rows;
 
+      const allCells = [];
+
       for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement('div');
         cell.className = 'footer-grid-cell';
         cell.addEventListener('pointerdown', (e) => {
-          isPainting = true;
-          paintCell(cell);
+          const isColored = cell.style.backgroundColor !== '';
+          if (isColored) {
+            cell.style.backgroundColor = '';
+            isPainting = false;
+          } else {
+            isPainting = true;
+            paintCell(cell);
+          }
           try {
             cell.releasePointerCapture(e.pointerId);
           } catch (err) {
@@ -42,6 +50,28 @@ export default function LandingFooter() {
           if (isPainting) paintCell(cell);
         });
         gridContainer.appendChild(cell);
+        allCells.push(cell);
+      }
+
+      // Initial random coloring: color 2 cells for each color in the array
+      if (allCells.length > 0) {
+        const numPerColor = 2;
+        const coloredIndices = new Set();
+
+        colors.forEach((color) => {
+          for (let c = 0; c < numPerColor; c++) {
+            let attempts = 0;
+            while (attempts < 100) {
+              const randIdx = Math.floor(Math.random() * allCells.length);
+              if (!coloredIndices.has(randIdx)) {
+                allCells[randIdx].style.backgroundColor = color;
+                coloredIndices.add(randIdx);
+                break;
+              }
+              attempts++;
+            }
+          }
+        });
       }
     }
 

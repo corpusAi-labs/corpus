@@ -38,10 +38,10 @@
 .side-nav-card .wave-layer-3 svg { transition-delay: 0ms; }
 
 /* Hover Delays - Forward Order (120ms stagger) */
-.side-nav-card:hover .wave-layer-0 svg { transform: translateY(0%); transition-delay: 0ms; }
-.side-nav-card:hover .wave-layer-1 svg { transform: translateY(0%); transition-delay: 120ms; }
-.side-nav-card:hover .wave-layer-2 svg { transform: translateY(0%); transition-delay: 240ms; }
-.side-nav-card:hover .wave-layer-3 svg { transform: translateY(0%); transition-delay: 360ms; }
+.side-nav-card:not([data-active="true"]):hover .wave-layer-0 svg { transform: translateY(0%); transition-delay: 0ms; }
+.side-nav-card:not([data-active="true"]):hover .wave-layer-1 svg { transform: translateY(0%); transition-delay: 120ms; }
+.side-nav-card:not([data-active="true"]):hover .wave-layer-2 svg { transform: translateY(0%); transition-delay: 240ms; }
+.side-nav-card:not([data-active="true"]):hover .wave-layer-3 svg { transform: translateY(0%); transition-delay: 360ms; }
 
 /* Transition text and icon colors on hover */
 .side-nav-card .nav-content {
@@ -63,6 +63,7 @@
 aside { transition: background-color 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
 aside[data-view-active="tags"] { background-color: #259d27 !important; }
 aside[data-view-active="spaces"] { background-color: #faa200 !important; }
+aside[data-view-active="dashboard"] { background-color: #f0e3d9 !important; }
 
 /* Active State Borders */
 .side-nav-card[data-active="true"] { border: 2px solid black; }
@@ -134,6 +135,90 @@ aside[data-view-active="spaces"] { background-color: #faa200 !important; }
 .is-saving {
   animation: pulse-saving 1s infinite ease-in-out;
   pointer-events: none;
+}
+
+/* Neubrutalist Animations & Scrollbar Utilities */
+@keyframes stripe-slide {
+  from { background-position: 0 0; }
+  to { background-position: 40px 0; }
+}
+
+.bg-neubrutalist-stripes {
+  background-image: linear-gradient(
+    45deg,
+    #000 25%,
+    #f3f4f6 25%,
+    #f3f4f6 50%,
+    #000 50%,
+    #000 75%,
+    #f3f4f6 75%,
+    #f3f4f6
+  );
+  background-size: 40px 40px;
+  animation: stripe-slide 1s linear infinite;
+}
+
+.bg-neubrutalist-stripes-yellow {
+  background-image: linear-gradient(
+    45deg,
+    #000 25%,
+    #faa200 25%,
+    #faa200 50%,
+    #000 50%,
+    #000 75%,
+    #faa200 75%,
+    #faa200
+  );
+  background-size: 40px 40px;
+  animation: stripe-slide 1s linear infinite;
+}
+
+.bg-neubrutalist-stripes-purple {
+  background-image: linear-gradient(
+    45deg,
+    #000 25%,
+    #9439f9 25%,
+    #9439f9 50%,
+    #000 50%,
+    #000 75%,
+    #9439f9 75%,
+    #9439f9
+  );
+  background-size: 40px 40px;
+  animation: stripe-slide 1s linear infinite;
+}
+
+.bg-neubrutalist-stripes-emerald {
+  background-image: linear-gradient(
+    45deg,
+    #000 25%,
+    #10b981 25%,
+    #10b981 50%,
+    #000 50%,
+    #000 75%,
+    #10b981 75%,
+    #10b981
+  );
+  background-size: 40px 40px;
+  animation: stripe-slide 1s linear infinite;
+}
+
+@keyframes neubrutalist-border-flash {
+  0% { border-color: #9439f9; box-shadow: 4px 4px 0px 0px rgba(0,0,0,1); }
+  50% { border-color: #000000; box-shadow: 4px 4px 0px 0px #9439f9; }
+  100% { border-color: #9439f9; box-shadow: 4px 4px 0px 0px rgba(0,0,0,1); }
+}
+
+.animate-border-flash {
+  animation: neubrutalist-border-flash 1.5s ease-in-out infinite;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 #sidebar-save-btn {
@@ -353,8 +438,8 @@ aside[data-view-active="spaces"] { background-color: #faa200 !important; }
   position: absolute;
   top: -3px;
   right: -3px;
-  width: 48px;
-  height: 48px;
+  width: 28px;
+  height: 28px;
   background: #fff8f4;
   border-bottom: 3px solid #000;
   border-left: 3px solid #000;
@@ -465,3 +550,9 @@ aside[data-view-active="spaces"] { background-color: #faa200 !important; }
 .sidebar-nav-item:hover {
   transform: translateX(4px);
 }
+
+/* Landing sidebar nav cards hover text and icon color fix */
+.landing-sidebar .side-nav-card:hover .nav-content {
+  color: white !important;
+}
+

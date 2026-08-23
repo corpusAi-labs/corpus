@@ -25,7 +25,7 @@ export function FAQItem({ question, answer }) {
   return (
     <div
       onClick={() => setIsOpen(!isOpen)}
-      className="neubrutalist-card bg-white p-6 cursor-pointer select-none transition-all duration-200 border-[3px] border-black shadow-hard-sm"
+      className="bg-white rounded-[4px] p-6 cursor-pointer select-none border-[3px] border-black shadow-hard-sm transition-all duration-200 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[5px_5px_0px_#000]"
     >
       <div className="flex justify-between items-center gap-4">
         <h3 className="text-xl md:text-2xl font-black font-hanken text-black uppercase">

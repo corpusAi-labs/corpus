@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { FiTrash2, FiExternalLink } from 'react-icons/fi'
+import { useQuery } from '@tanstack/react-query'
 import api from '../../api/axios.js'
+import { fetchSpaces } from '../../api/spaces.js'
 
 function truncate(text, max = 180) {
   if (!text) return text
@@ -27,6 +29,15 @@ const colorMap = {
 export default function ItemCard({ item: initialItem, onClick, onDelete }) {
   const [item, setItem] = useState(initialItem)
   const isPending = item.status === 'pending_ai'
+
+  const { data: spacesData } = useQuery({
+    queryKey: ['spaces'],
+    queryFn: fetchSpaces,
+    staleTime: 30000,
+  })
+  const spaces = spacesData?.spaces || []
+  const associatedSpace = spaces.find(s => s._id === item.spaceId)
+  const spaceColor = associatedSpace?.color
 
   const [maskStyle, setMaskStyle] = useState({
     maskImage: 'none',
@@ -74,7 +85,11 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
     <div
       onPointerMove={handlePointerMove}
       onClick={() => onClick(item)}
-      className="memory-card relative overflow-hidden rounded-[9px] bg-white p-5 min-h-[160px] border-2 border-transparent hover:border-black transition-all duration-200 cursor-pointer break-inside-avoid mb-5 group select-none flex flex-col justify-between"
+      className={`memory-card relative overflow-hidden rounded-[9px] bg-white p-5 min-h-[160px] h-full border-2 transition-all duration-200 cursor-pointer group select-none flex flex-col justify-between ${
+        isPending
+          ? 'animate-border-flash'
+          : 'border-transparent hover:border-black'
+      }`}
       style={{
         '--hover-border-color': colors.border
       }}
@@ -96,8 +111,8 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
           </span>
           <div className="flex items-center gap-1.5">
             {isPending && (
-              <span className="font-mono text-[9px] uppercase tracking-wider text-emerald-600 animate-pulse flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="font-mono text-[9px] uppercase tracking-wider text-[#9439f9] animate-pulse flex items-center gap-1 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#9439f9] animate-ping" />
                 scanning
               </span>
             )}
@@ -121,8 +136,8 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
                 </div>
               ) : (
                 <div
-                  className="rounded-md w-full flex items-center justify-center h-[60px] mb-1 opacity-90 group-hover:opacity-100 transition-opacity"
-                  style={{ background: `linear-gradient(135deg, ${colors.border} 0%, #faa200 100%)` }}
+                  className="rounded-md w-full flex items-center justify-center h-[60px] mb-1 opacity-90 group-hover:opacity-100 transition-opacity border border-black/10"
+                  style={{ backgroundColor: spaceColor || '#000000' }}
                 >
                   <span className="text-white text-[11px] font-bold tracking-wide uppercase font-circular px-3 truncate">
                     {item.title || domain || 'Link'}

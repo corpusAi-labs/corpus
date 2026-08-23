@@ -28,7 +28,7 @@ export default function SpacesPage() {
       {/* Background grid overlay */}
       <div className="fixed inset-0 pointer-events-none bg-grid-overlay z-0" data-purpose="background-pattern"></div>
 
-      <div className="relative z-10 flex min-h-screen overflow-x-hidden max-w-[1440px] mx-auto">
+      <div className="relative z-10 flex min-h-screen w-full">
         <Sidebar />
 
         <main className="relative z-10 flex-1 pt-[26px] pr-6 pb-10 min-w-0 pl-10" data-purpose="main-feed">

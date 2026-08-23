@@ -1,9 +1,8 @@
 import { useEffect, useRef } from 'react'
 import axios from 'axios'
 import useAuthStore from '../store/authStore.js'
-import { getToken, clearSession } from '../utils/authStorage.js'
-
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
+import { isLoggedIn, saveSession, clearSession } from '../utils/authStorage.js'
+import { BASE } from '../api/axios.js'
 
 export default function AuthInit({ children }) {
   const { setAuth, clearAuth } = useAuthStore()
@@ -14,19 +13,24 @@ export default function AuthInit({ children }) {
     ran.current = true
 
     async function restoreSession() {
-      const token = getToken()
-      if (!token) {
+      if (!isLoggedIn()) {
         clearAuth()
         return
       }
 
       try {
-        const { data } = await axios.get(`${BASE}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
-        })
-        setAuth(data.user, token)
-      } catch {
+        const { data } = await axios.post(
+          `${BASE}/auth/refresh`,
+          {},
+          {
+            withCredentials: true,
+            timeout: 10000,
+          }
+        )
+        setAuth(data.user, data.token)
+        saveSession(data.user)
+      } catch (err) {
+        console.warn('[auth init] session restoration failed:', err.message)
         clearSession()
         clearAuth()
       }

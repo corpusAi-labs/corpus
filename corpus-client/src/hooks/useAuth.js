@@ -10,14 +10,14 @@ export function useAuth() {
 
   const login = useCallback(async (email, password) => {
     const data = await loginApi(email, password)
-    saveSession(data.token, data.user)
+    saveSession(data.user)
     setAuth(data.user, data.token)
     navigate('/dashboard')
   }, [setAuth, navigate])
 
   const signup = useCallback(async (name, email, password) => {
     const data = await signupApi(name, email, password)
-    saveSession(data.token, data.user)
+    saveSession(data.user)
     setAuth(data.user, data.token)
     navigate('/dashboard')
   }, [setAuth, navigate])

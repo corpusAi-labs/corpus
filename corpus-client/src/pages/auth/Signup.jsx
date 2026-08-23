@@ -38,6 +38,17 @@ export default function Signup() {
       {/* Background grid overlay */}
       <div className="fixed inset-0 pointer-events-none bg-grid-overlay z-0" data-purpose="background-pattern"></div>
 
+      {/* Floating Back to Home button */}
+      <Link
+        to="/"
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 border-2 border-black rounded-[4px] bg-white text-[12px] font-bold font-circular shadow-[3px_3px_0px_black] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_black] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[2px_2px_0px_black] transition-all text-black"
+      >
+        <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" width="16" className="mr-0.5">
+          <path d="M19 12H5M12 19l-7-7 7-7"></path>
+        </svg>
+        Back to Home
+      </Link>
+
       <div className="relative z-10 w-full max-w-sm bg-white border-2 border-black rounded-[10px] p-8 shadow-[6px_6px_0px_black] select-none">
         <div className="mb-8 text-center">
           <Link to="/" className="font-roc text-[36px] font-bold text-black leading-none">corpus.</Link>

@@ -7,7 +7,7 @@ import SaveComposer from '../../components/dashboard/SaveComposer.jsx'
 import DetailPanel from '../../components/dashboard/DetailPanel.jsx'
 import NoCreditsModal from '../../components/ui/NoCreditsModal.jsx'
 import useAuthStore from '../../store/authStore.js'
-import { fetchItems, searchItems as searchItemsApi, createItem, deleteItem, uploadImage } from '../../api/items.js'
+import { fetchItems, searchItems as searchItemsApi, createItem, deleteItem, uploadImage, fetchAllTags } from '../../api/items.js'
 import { getMeApi } from '../../api/auth.js'
 
 export default function Dashboard() {
@@ -19,10 +19,12 @@ export default function Dashboard() {
   const [activeType, setActiveType] = useState('')
   const [activeTag, setActiveTag] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortOption, setSortOption] = useState('newest')
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [noCredits, setNoCredits] = useState(false)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
+  const [tagSearchQuery, setTagSearchQuery] = useState('')
 
   // Parse view from URL search params
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search])
@@ -39,30 +41,36 @@ export default function Dashboard() {
     }
   }, [queryParams, location.pathname, navigate])
 
-  useQuery({
+  // Get user data from API
+  const { data } = useQuery({
     queryKey: ['me'],
-    queryFn: async () => {
-      const data = await getMeApi()
-      setCredits(data.user.credits)
-      return data
-    },
+    queryFn: getMeApi,
     refetchOnWindowFocus: true,
     staleTime: 30000,
   })
+  // Access directly in your component without extra local state:
+  const credits = data?.user?.credits
 
+  
   const itemsQuery = useInfiniteQuery({
-    queryKey: ['items', activeType, activeTag],
+    queryKey: ['items', activeType, activeTag, sortOption],
     queryFn: ({ pageParam = undefined }) =>
-      fetchItems({ cursor: pageParam, type: activeType || undefined, tag: activeTag || undefined }),
+      fetchItems({ cursor: pageParam, type: activeType || undefined, tag: activeTag || undefined, sort: sortOption }),
     initialPageParam: undefined,
     getNextPageParam: (last) => last.nextCursor || undefined,
     enabled: !searchQuery,
   })
 
   const searchResultsQuery = useQuery({
-    queryKey: ['search', searchQuery],
-    queryFn: () => searchItemsApi(searchQuery),
+    queryKey: ['search', searchQuery, sortOption],
+    queryFn: () => searchItemsApi(searchQuery, sortOption),
     enabled: !!searchQuery,
+  })
+
+  const tagsQuery = useQuery({
+    queryKey: ['tags'],
+    queryFn: fetchAllTags,
+    staleTime: 60000,
   })
 
   const saveMutation = useMutation({
@@ -77,6 +85,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['me'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
       setIsComposerOpen(false)
     },
     onError: (err) => {
@@ -93,6 +102,7 @@ export default function Dashboard() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ['items'] })
       await queryClient.cancelQueries({ queryKey: ['search'] })
+      await queryClient.cancelQueries({ queryKey: ['tags'] })
       const previousItems = queryClient.getQueriesData({ queryKey: ['items'] })
       const previousSearch = queryClient.getQueriesData({ queryKey: ['search'] })
       queryClient.setQueriesData({ queryKey: ['items'] }, (old) => {
@@ -112,13 +122,17 @@ export default function Dashboard() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['search'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
     },
   })
 
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['items'] })
     queryClient.invalidateQueries({ queryKey: ['search'] })
+    queryClient.invalidateQueries({ queryKey: ['tags'] })
   }, [queryClient])
+
+  const [isSortOpen, setIsSortOpen] = useState(false)
 
   const isSearching = !!searchQuery
   const allPages = itemsQuery.data?.pages.flatMap(p => p.items) || []
@@ -127,15 +141,19 @@ export default function Dashboard() {
 
   // Dynamic tags extraction
   const allTags = useMemo(() => {
-    const tagSet = new Set()
-    allPages.forEach(item => item.tags?.forEach(t => tagSet.add(t)))
-    return Array.from(tagSet).sort()
-  }, [allPages])
+    return tagsQuery.data?.tags || []
+  }, [tagsQuery.data])
 
   // Alphabetical tags grouping
+  const filteredTags = useMemo(() => {
+    if (!tagSearchQuery.trim()) return allTags
+    const q = tagSearchQuery.toLowerCase()
+    return allTags.filter(tag => tag && tag.toLowerCase().includes(q))
+  }, [allTags, tagSearchQuery])
+
   const groupedTags = useMemo(() => {
     const groups = {}
-    allTags.forEach(tag => {
+    filteredTags.forEach(tag => {
       if (!tag) return
       const firstLetter = tag.charAt(0).toUpperCase()
       if (!groups[firstLetter]) groups[firstLetter] = []
@@ -145,7 +163,7 @@ export default function Dashboard() {
       acc[key] = groups[key].sort()
       return acc
     }, {})
-  }, [allTags])
+  }, [filteredTags])
 
   function handleTypeChange(val) {
     setActiveType(val)
@@ -175,55 +193,96 @@ export default function Dashboard() {
       {/* Background grid overlay */}
       <div className="fixed inset-0 pointer-events-none bg-grid-overlay z-0" data-purpose="background-pattern"></div>
 
-      <div className="relative z-10 flex min-h-screen overflow-x-hidden max-w-[1440px] mx-auto">
+      <div className="relative z-10 flex min-h-screen w-full">
         <Sidebar onOpenComposer={() => setIsComposerOpen(true)} />
 
         <main className="relative z-10 flex-1 pt-[26px] pr-6 pb-10 min-w-0 pl-10" data-purpose="main-feed">
           {currentView === 'tags' ? (
-            /* TAGS VIEW */
+             /* TAGS VIEW */
             <div className="view-content" id="view-tags">
-              <div className="mb-6 flex items-center gap-4">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 transition-colors group back-btn"
-                >
-                  <svg className="transition-transform group-hover:-translate-x-1" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" width="24">
-                    <path d="M19 12H5M12 19l-7-7 7-7"></path>
-                  </svg>
-                </button>
-                <h1 className="text-[48px] font-bold font-roc leading-none">All Tags</h1>
+              <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 transition-colors group back-btn"
+                  >
+                    <svg className="transition-transform group-hover:-translate-x-1" fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" width="24">
+                      <path d="M19 12H5M12 19l-7-7 7-7"></path>
+                    </svg>
+                  </button>
+                  <h1 className="text-[48px] font-bold font-roc leading-none">All Tags</h1>
+                </div>
+
+                {/* Real-time Tag Search Bar */}
+                <div className="relative w-full sm:w-64">
+                  <input
+                    type="text"
+                    value={tagSearchQuery}
+                    onChange={(e) => setTagSearchQuery(e.target.value)}
+                    placeholder="Search tags..."
+                    className="w-full px-4 py-2 border-2 border-black rounded-[4px] text-[14px] font-circular focus:outline-none focus:ring-0 shadow-[3px_3px_0px_black] focus:shadow-none transition-all placeholder:text-gray-400 bg-white"
+                  />
+                  {tagSearchQuery && (
+                    <button
+                      onClick={() => setTagSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[16px] font-bold text-gray-400 hover:text-black"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-8 border-t border-black pt-8 relative">
+              <div className="flex flex-col gap-8 border-t border-black pt-8 relative">
                 <div className="absolute top-[-1px] left-[-40px] w-[40px] h-[1px] bg-black"></div>
-                {Object.keys(groupedTags).length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-[15px] font-circular text-gray-500">
+                 {Object.keys(groupedTags).length === 0 ? (
+                  <div className="py-12 text-center text-[15px] font-circular text-gray-500">
                     No tags found. Add tags to your notes and links to see them here!
                   </div>
                 ) : (
-                  Object.keys(groupedTags).map(letter => (
-                    <div key={letter} className="flex flex-col gap-4">
-                      <h2 className="text-[14px] font-bold font-roc uppercase tracking-widest text-gray-400 border-b border-gray-200 pb-2 mb-2">
-                        {letter}
-                      </h2>
-                      <div className="flex flex-col gap-2">
-                        {groupedTags[letter].map(tag => (
-                          <span
-                            key={tag}
-                            onClick={() => handleTagChange(tag)}
-                            className="text-[15px] font-circular font-medium hover:text-[#259d27] cursor-pointer truncate"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                  Object.keys(groupedTags).map((letter, letterIdx) => {
+                    const tags = groupedTags[letter]
+                    return (
+                      <div key={letter} className="w-full flex flex-col gap-4">
+                        {/* Section Header */}
+                        <div className="flex items-center gap-4 select-none">
+                          <h2 className="text-[16px] font-bold font-roc uppercase tracking-widest text-black">
+                            {letter}
+                          </h2>
+                          <div className="flex-1 h-[2px] bg-black"></div>
+                        </div>
+
+                        {/* Tags Grid (8 columns on large screens) */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-y-4 pt-2">
+                          {tags.map((tag, idx) => {
+                            // Check if this tag is the last column in its row of 8 to omit border-r
+                            const isLastInRow = (idx + 1) % 8 === 0 || idx === tags.length - 1
+                            return (
+                              <div
+                                key={tag}
+                                className={`px-3 flex flex-col justify-center min-h-[36px] ${
+                                  !isLastInRow ? 'border-r border-black/10' : ''
+                                }`}
+                              >
+                                <span
+                                  onClick={() => handleTagChange(tag)}
+                                  className="text-[15px] font-circular font-semibold text-black hover:text-[#259d27] cursor-pointer truncate block"
+                                  title={tag}
+                                >
+                                  {tag}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
             </div>
-          ) : (
-            /* DASHBOARD VIEW */
+          ) : (             /* DASHBOARD VIEW */
             <div className="view-content" id="view-dashboard">
               <div className="mb-1 h-[72px] flex items-center" data-purpose="hero-heading">
                 {isSearchFocused || searchQuery ? (
@@ -233,7 +292,7 @@ export default function Dashboard() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onBlur={() => { if (!searchQuery) setIsSearchFocused(false) }}
                     autoFocus
-                    placeholder="Search in my memory..."
+                    placeholder="Search your archive..."
                     className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-[48px] leading-tight font-roc text-black placeholder:text-gray-400 font-bold"
                   />
                 ) : (
@@ -241,45 +300,98 @@ export default function Dashboard() {
                     onClick={() => setIsSearchFocused(true)}
                     className="search-heading text-[48px] leading-tight cursor-text flex flex-wrap font-roc select-none"
                   >
-                    <span>Search</span><span> in</span><span> my</span><span> memory...</span>
+                    <span>Search</span><span> your</span><span> archive...</span>
                   </h1>
                 )}
               </div>
 
-              <div className="border-t border-black pt-4 mb-7 flex gap-4 flex-wrap relative" data-purpose="filter-bar">
+              <div className="border-t border-black pt-4 mb-7 flex justify-between items-center flex-wrap gap-4 relative" data-purpose="filter-bar">
                 <div className="absolute top-[-1px] left-[-40px] w-[40px] h-[1px] bg-black"></div>
-                {FILTERS.map(f => {
-                  const isActive = activeType === f.value && !activeTag
-                  return (
-                    <button
-                      key={f.value}
-                      onClick={() => handleTypeChange(f.value)}
-                      className="filter-btn px-[29px] py-[7px] rounded-[4px] text-[14px] font-bold font-circular text-white transition-all duration-150"
-                      style={{
-                        backgroundColor: isActive ? 'black' : f.color,
-                        boxShadow: isActive ? 'none' : '3px 3px 0px black',
-                        transform: isActive ? 'translate(3px, 3px)' : 'none',
-                        color: 'white',
-                      }}
-                      data-active={isActive ? 'true' : 'false'}
-                    >
-                      {f.label}
-                    </button>
-                  )
-                })}
+                <div className="flex gap-4 flex-wrap">
+                  {FILTERS.map(f => {
+                    const isActive = activeType === f.value && !activeTag
+                    return (
+                      <button
+                        key={f.value}
+                        onClick={() => handleTypeChange(f.value)}
+                        className="filter-btn px-[29px] py-[7px] rounded-[4px] text-[14px] font-bold font-circular text-white transition-all duration-150"
+                        style={{
+                          backgroundColor: isActive ? 'black' : f.color,
+                        }}
+                        data-active={isActive ? 'true' : 'false'}
+                      >
+                        {f.label}
+                      </button>
+                    )
+                  })}
 
-                {activeTag && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500">Filtered by tag:</span>
+                  {activeTag && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] uppercase tracking-wider text-gray-500">Filtered by tag:</span>
+                      <button
+                        onClick={() => handleTagChange('')}
+                        className="filter-btn px-4 py-1.5 rounded-[4px] text-[12px] font-bold font-circular text-white bg-black hover:bg-gray-900 transition-all flex items-center gap-1.5"
+                      >
+                        #{activeTag}
+                        <span className="text-[14px] leading-none">×</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 relative" data-purpose="sort-control">
+                  <span className="text-[13px] font-bold font-circular uppercase tracking-wider text-black/50">Sort:</span>
+                  <div className="relative">
                     <button
-                      onClick={() => handleTagChange('')}
-                      className="filter-btn px-4 py-1.5 rounded-[4px] text-[12px] font-bold font-circular text-white bg-black hover:bg-gray-900 transition-all flex items-center gap-1.5"
+                      onClick={() => setIsSortOpen(!isSortOpen)}
+                      className="bg-white border-2 border-black rounded-[4px] px-3 py-1.5 text-[13px] font-bold font-circular shadow-[3px_3px_0px_black] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[2px_2px_0px_black] transition-all cursor-pointer flex items-center gap-1.5 text-black min-w-[95px] justify-between"
                     >
-                      #{activeTag}
-                      <span className="text-[14px] leading-none">×</span>
+                      <span className="capitalize">{sortOption}</span>
+                      <svg
+                        className={`w-3 h-3 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                      </svg>
                     </button>
+
+                    {isSortOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40 bg-transparent"
+                          onClick={() => setIsSortOpen(false)}
+                        />
+                        <div className="absolute right-0 mt-1.5 w-[110px] bg-white border-2 border-black rounded-[4px] shadow-[4px_4px_0px_black] z-50 overflow-hidden font-circular text-[13px]">
+                          <button
+                            onClick={() => {
+                              setSortOption('newest')
+                              setIsSortOpen(false)
+                            }}
+                            className={`w-full text-left px-3 py-2 font-bold hover:bg-gray-100 transition-colors ${
+                              sortOption === 'newest' ? 'bg-black text-white hover:bg-black/90' : 'text-black'
+                            }`}
+                          >
+                            Newest
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSortOption('oldest')
+                              setIsSortOpen(false)
+                            }}
+                            className={`w-full text-left px-3 py-2 border-t-2 border-black font-bold hover:bg-gray-100 transition-colors ${
+                              sortOption === 'oldest' ? 'bg-black text-white hover:bg-black/90' : 'text-black'
+                            }`}
+                          >
+                            Oldest
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
 
               {isSearching && (

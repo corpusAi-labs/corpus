@@ -1,17 +1,23 @@
 import api from './axios.js'
 
-export async function fetchItems({ cursor, type, tag, spaceId } = {}) {
+export async function fetchItems({ cursor, type, tag, spaceId, sort } = {}) {
   const params = {}
   if (cursor) params.cursor = cursor
   if (type) params.type = type
   if (tag) params.tag = tag
   if (spaceId) params.spaceId = spaceId
+  if (sort) params.sort = sort
   const { data } = await api.get('/items', { params })
   return data
 }
 
-export async function searchItems(q) {
-  const { data } = await api.get('/items/search', { params: { q } })
+export async function searchItems(q, sort) {
+  const { data } = await api.get('/items/search', { params: { q, sort } })
+  return data
+}
+
+export async function fetchAllTags() {
+  const { data } = await api.get('/items/tags')
   return data
 }
 

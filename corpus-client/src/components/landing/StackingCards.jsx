@@ -68,8 +68,8 @@ export default function StackingCards() {
       if (i > 0) {
         stackTl.to(
           card,
-          { y: i * offset, ease: 'none', duration: 1 },
-          (i - 1) * 0.8
+          { y: i * offset, ease: 'none', duration: 2 },
+          (i - 1) * 2
         );
       }
     });

@@ -41,17 +41,6 @@ export default function SpaceCard({ space }) {
         </div>
       </div>
 
-      {/* Rotating Badge on Hover */}
-      <div className="learn-more-badge pointer-events-none">
-        <svg className="badge-svg w-full h-full" viewBox="0 0 100 100">
-          <path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="none" />
-          <text className="text-[7px] font-bold fill-black font-circular tracking-[0.12em] uppercase">
-            <textPath href="#circlePath">
-              EXPLORE SPACE • EXPLORE SPACE • 
-            </textPath>
-          </text>
-        </svg>
-      </div>
     </div>
   )
 }
