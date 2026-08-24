@@ -54,7 +54,7 @@ export async function smartSearch(req, res) {
     }
 
     // ── NON-EMPTY SEARCH ──
-    const terms = buildSearchQuery(q)
+    const terms = buildSearchQuery(q) // gives all terms (array)
     if (terms.length === 0) {
       return res.json({ items: [] })
     }

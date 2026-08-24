@@ -11,8 +11,8 @@ export async function fetchItems({ cursor, type, tag, spaceId, sort } = {}) {
   return data
 }
 
-export async function searchItems(q, sort) {
-  const { data } = await api.get('/items/search', { params: { q, sort } })
+export async function searchItems(q, sort, filters = {}) {
+  const { data } = await api.get('/items/search', { params: { q, sort, ...filters } })
   return data
 }
 

@@ -62,8 +62,8 @@ export default function Dashboard() {
   })
 
   const searchResultsQuery = useQuery({
-    queryKey: ['search', searchQuery, sortOption],
-    queryFn: () => searchItemsApi(searchQuery, sortOption),
+    queryKey: ['search', searchQuery, sortOption, activeType, activeTag],
+    queryFn: () => searchItemsApi(searchQuery, sortOption, { type: activeType || undefined, tag: activeTag || undefined }),
     enabled: !!searchQuery,
   })
 
