@@ -89,7 +89,7 @@ export async function smartSearch(req, res) {
 
     // Score candidates in memory
     const ranked = matchedItems.map(item => {
-      let uniqueMatchedTerms = 0
+     let uniqueMatchedTerms  = 0
       let fieldScore = 0
 
       for (const term of terms) {
@@ -98,7 +98,8 @@ export async function smartSearch(req, res) {
         let matchedThisTerm = false
 
 
-         // 1. Note (highest points as it was manual)
+         // 1. Note (11 points)
+         // if item has note and term matches that note
         if (item.note && regex.test(item.note)) {
           fieldScore += 11
           matchedThisTerm = true
@@ -117,19 +118,19 @@ export async function smartSearch(req, res) {
           matchedThisTerm = true
         }
 
-        // 4. URL (1 point)
+        // 4. URL (5 points)
         if (item.url && regex.test(item.url)) {
           fieldScore += 5
           matchedThisTerm = true
         }
 
-        // 4. Summary (3 points)
+        // 5. Summary (3 points)
         if (item.summary && regex.test(item.summary)) {
           fieldScore += 3
           matchedThisTerm = true
         }
 
-        // 6. Content (1 points)
+        // 6. Content (1 point)
         if (item.content && regex.test(item.content)) {
           fieldScore += 1
           matchedThisTerm = true

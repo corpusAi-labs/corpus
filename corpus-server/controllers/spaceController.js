@@ -29,29 +29,25 @@ export async function listSpaces(req, res) {
   try {
     const spaces = await Space.find({ userId: req.user.id }).sort({ createdAt: -1 })
 
-    // attach item count + small preview thumbnails for each space
     const withMeta = await Promise.all(
       spaces.map(async (space) => {
         const count = await Item.countDocuments({
           userId: req.user.id,
           spaceId: space._id,
           deletedAt: null,
+          archived: false,
         })
-        const previewItems = await Item.find({
-          userId: req.user.id,
-          spaceId: space._id,
-          deletedAt: null,
-        })
-          .sort({ createdAt: -1 })
-          .limit(3)
-          .select('thumbnailUrl title type')
 
-        return { ...space.toObject(), itemCount: count, previewItems }
+        return {
+          ...space.toObject(),
+          itemCount: count,
+        }
       })
     )
 
     return res.json({ spaces: withMeta })
   } catch (err) {
+    console.error('[listSpaces]', err.message)
     return res.status(500).json({ error: 'Failed to fetch spaces' })
   }
 }
