@@ -27,8 +27,14 @@ router.post('/request-password-setup', requestPasswordSetup)
 router.post('/confirm-password-setup', confirmPasswordSetup)
 router.get('/me', authMiddleware, getMe)
 
-// Google OAuth routes
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false, prompt: 'select_account' }))
+router.get('/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).json({
+      error: 'Google OAuth is not configured on the server. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in environment variables.',
+    })
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false, prompt: 'select_account' })(req, res, next)
+})
 
 router.get(
   '/google/callback',
