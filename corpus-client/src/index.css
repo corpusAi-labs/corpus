@@ -38,10 +38,10 @@
 .side-nav-card .wave-layer-3 svg { transition-delay: 0ms; }
 
 /* Hover Delays - Forward Order (120ms stagger) */
-.side-nav-card:not([data-active="true"]):hover .wave-layer-0 svg { transform: translateY(0%); transition-delay: 0ms; }
-.side-nav-card:not([data-active="true"]):hover .wave-layer-1 svg { transform: translateY(0%); transition-delay: 120ms; }
-.side-nav-card:not([data-active="true"]):hover .wave-layer-2 svg { transform: translateY(0%); transition-delay: 240ms; }
-.side-nav-card:not([data-active="true"]):hover .wave-layer-3 svg { transform: translateY(0%); transition-delay: 360ms; }
+.side-nav-card:hover .wave-layer-0 svg { transform: translateY(0%); transition-delay: 0ms; }
+.side-nav-card:hover .wave-layer-1 svg { transform: translateY(0%); transition-delay: 120ms; }
+.side-nav-card:hover .wave-layer-2 svg { transform: translateY(0%); transition-delay: 240ms; }
+.side-nav-card:hover .wave-layer-3 svg { transform: translateY(0%); transition-delay: 360ms; }
 
 /* Transition text and icon colors on hover */
 .side-nav-card .nav-content {
@@ -366,7 +366,7 @@ aside[data-view-active="dashboard"] { background-color: #f0e3d9 !important; }
   position: relative;
   flex-shrink: 0;
 }
-.bento-panel-large { width: 750px; }
+.bento-panel-large { width: 580px; }
 .bento-panel-medium { width: 550px; }
 .bento-panel-small { width: 450px; }
 .bento-grid-col {
@@ -518,6 +518,7 @@ aside[data-view-active="dashboard"] { background-color: #f0e3d9 !important; }
     width: 156px;
     z-index: 100;
     border-right: 2px solid black;
+    overflow: hidden;
   }
   .landing-main-content {
     margin-left: 156px;
@@ -555,4 +556,6 @@ aside[data-view-active="dashboard"] { background-color: #f0e3d9 !important; }
 .landing-sidebar .side-nav-card:hover .nav-content {
   color: white !important;
 }
+
+
 

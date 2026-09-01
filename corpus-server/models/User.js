@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String },
     googleId: { type: String, unique: true, sparse: true },
+    avatar: { type: String },
     refreshTokens: [{ type: String }],
     credits: { type: Number, default: 100 },
     plan: { type: String, enum: ['free', 'beginner', 'pro', 'max'], default: 'free' },

@@ -15,7 +15,7 @@ export default function HeroSection() {
             id="hero-text"
           >
             <h1
-              className="text-[#f74700] text-[4rem] md:text-[5.5rem] leading-[0.9] font-black tracking-tight font-hanken"
+              className="text-[#f74700] text-[2.8rem] sm:text-[3.5rem] md:text-[4.2rem] lg:text-[4.6rem] leading-[1.05] font-black tracking-tight font-hanken"
               id="hero-title"
             >
               Remember everything <br />

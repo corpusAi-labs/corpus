@@ -1,7 +1,17 @@
 import api from './axios.js'
 
-export async function signupApi(name, email, password) {
-  const { data } = await api.post('/auth/signup', { name, email, password })
+export async function signupApi(name, email, password, confirmPassword) {
+  const { data } = await api.post('/auth/signup', { name, email, password, confirmPassword })
+  return data
+}
+
+export async function verifyOtpApi(email, otp) {
+  const { data } = await api.post('/auth/verify-otp', { email, otp })
+  return data
+}
+
+export async function resendOtpApi(email) {
+  const { data } = await api.post('/auth/resend-otp', { email })
   return data
 }
 

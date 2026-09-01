@@ -1,0 +1,38 @@
+<svg viewBox="0 0 660 600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="660" height="600" fill="#0a0a0a"/>
+
+  <!-- Document bracket outline (rounded square with folded top-right corner) -->
+  <path d="
+      M 400 130
+      L 210 130
+      C 155 130, 115 170, 115 225
+      L 115 480
+      C 115 535, 155 575, 210 575
+      L 445 575
+      C 500 575, 540 535, 540 480
+      L 540 280
+    "
+    fill="none"
+    stroke="#f2f0eb"
+    stroke-width="34"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Folded corner (page fold) -->
+  <path d="M 415 130 L 415 245 C 415 258 425 268 438 268 L 548 268 Z"
+        fill="#ee4123"/>
+
+  <!-- Connecting lines between nodes -->
+  <path d="M 245 260 Q 340 300 435 375"
+        fill="none" stroke="#f2f0eb" stroke-width="14" stroke-linecap="round"/>
+  <path d="M 235 275 Q 225 370 240 460"
+        fill="none" stroke="#f2f0eb" stroke-width="14" stroke-linecap="round"/>
+  <path d="M 265 470 Q 350 445 420 400"
+        fill="none" stroke="#f2f0eb" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Nodes -->
+  <circle cx="238" cy="252" r="42" fill="#e8391f"/>
+  <circle cx="238" cy="470" r="42" fill="#6a1fd0"/>
+  <circle cx="452" cy="378" r="42" fill="#a4e029"/>
+</svg>

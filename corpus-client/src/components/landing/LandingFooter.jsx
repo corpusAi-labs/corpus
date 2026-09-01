@@ -115,7 +115,9 @@ export default function LandingFooter() {
       <div className="bg-[#fff8f4] py-8 border-t-2 border-black relative z-50 font-dm-sans">
         <div className="max-w-[1440px] mx-auto px-10 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="max-w-md text-center md:text-left">
-            <p className="font-black text-lg mb-1 font-hanken">© 2026 Corpus Development</p>
+            <div className="flex items-center justify-center md:justify-start mb-1">
+              <img src="/Frame 4.svg" alt="Corpus" className="h-6 w-auto object-contain" />
+            </div>
             <p className="text-black/60 font-medium text-sm leading-relaxed">
               Building a second brain for knowledge.
             </p>

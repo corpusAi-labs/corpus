@@ -53,18 +53,18 @@ export default function BentoGallery() {
           <div className="bento-container">
             
             {/* 1. LARGE ORANGE CARD */}
-            <div className="bento-panel bento-panel-large bg-[#f74700] p-12 flex flex-col justify-end text-white">
-              <div className="absolute top-10 left-10">
-                <span className="px-4 py-2 border border-white/30 rounded-full text-xs font-bold uppercase tracking-widest font-hanken">
+            <div className="bento-panel bento-panel-large bg-[#f74700] p-9 lg:p-10 flex flex-col justify-end text-white">
+              <div className="absolute top-8 left-8 lg:top-10 lg:left-10">
+                <span className="px-3.5 py-1.5 border border-white/30 rounded-full text-[11px] font-bold uppercase tracking-widest font-hanken">
                  ORGANIZATION ON AUTOPILOT
                 </span>
               </div>
-              <h3 className="text-7xl font-black leading-[1.1] mb-6 font-hanken">
+              <h3 className="text-5xl lg:text-6xl font-black leading-[1.05] mb-5 font-hanken">
                 Save anything.<br />
                 Find everything.
               </h3>
-              <p className="text-2xl font-bold mb-4 font-dm-sans">No tags, no folders, zero manual effort</p>
-              <p className="text-white/80 leading-relaxed text-base max-w-md font-dm-sans">
+              <p className="text-xl font-bold mb-3 font-dm-sans">No tags, no folders, zero manual effort</p>
+              <p className="text-white/80 leading-relaxed text-sm lg:text-base max-w-md font-dm-sans">
                 Drop in any link, note, quote, or image. Corpus instantly reads, tags, and files it away using AI—so you can search naturally whenever you need it again.
               </p>
             </div>

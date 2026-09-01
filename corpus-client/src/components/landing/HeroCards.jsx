@@ -19,12 +19,12 @@ export default function HeroCards() {
      *
      * Blue / Cat / Orange / Yellow stay on the right half.
      */
-    gsap.set('#card-green',  { top: '2%',    left: '2%', width: '28%', height: '20%' });
-    gsap.set('#card-blue',   { top: '2%',    right: '2%', width: '16%', height: '32%' });
-    gsap.set('#card-purple', { bottom: '2%', left: '2%', width: '16%', height: '38%' });
-    gsap.set('#card-cat',    { top: '2%',    left: '58%', width: '16%', height: '20%' });
-    gsap.set('#card-orange', { bottom: '2%', left: '44%', width: '16%', height: '20%' });
-    gsap.set('#card-yellow', { bottom: '2%', right: '2%', width: '16%', height: '20%' });
+    gsap.set('#card-green',  { top: '3%',    left: '3%', width: '22%', height: '18%' });
+    gsap.set('#card-blue',   { top: '3%',    right: '3%', width: '13%', height: '22%' });
+    gsap.set('#card-purple', { bottom: '3%', left: '3%', width: '13%', height: '28%' });
+    gsap.set('#card-cat',    { top: '3%',    left: '64%', width: '13%', height: '18%' });
+    gsap.set('#card-orange', { bottom: '3%', left: '44%', width: '14%', height: '18%' });
+    gsap.set('#card-yellow', { bottom: '3%', right: '3%', width: '14%', height: '18%' });
 
     const heroTl = gsap.timeline({
       scrollTrigger: {
