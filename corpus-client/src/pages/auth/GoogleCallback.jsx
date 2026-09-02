@@ -12,8 +12,8 @@ export default function GoogleCallback() {
     const dataParam = searchParams.get('data')
     if (dataParam) {
       try {
-        const { token, user } = JSON.parse(decodeURIComponent(dataParam))
-        saveSession(user)
+        const { token, refreshToken, user } = JSON.parse(decodeURIComponent(dataParam))
+        saveSession(user, token, refreshToken)
         setAuth(user, token)
         navigate('/dashboard', { replace: true })
       } catch {

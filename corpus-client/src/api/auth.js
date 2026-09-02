@@ -20,8 +20,8 @@ export async function loginApi(email, password) {
   return data
 }
 
-export async function logoutApi() {
-  await api.post('/auth/logout')
+export async function logoutApi(refreshToken) {
+  await api.post('/auth/logout', { refreshToken })
 }
 
 export async function getMeApi() {

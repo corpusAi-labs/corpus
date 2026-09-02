@@ -1,9 +1,13 @@
 import { create } from 'zustand'
+import { getStoredUser, getToken } from '../utils/authStorage.js'
+
+const initialUser = getStoredUser()
+const initialToken = getToken()
 
 const useAuthStore = create((set) => ({
-  user: null,
-  token: null,
-  isLoading: true,
+  user: initialUser,
+  token: initialToken,
+  isLoading: false,
 
   setAuth: (user, token) => set({
     user,
@@ -21,3 +25,4 @@ const useAuthStore = create((set) => ({
 }))
 
 export default useAuthStore
+

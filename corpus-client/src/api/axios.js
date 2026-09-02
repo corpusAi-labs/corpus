@@ -1,6 +1,6 @@
 import axios from 'axios'
 import useAuthStore from '../store/authStore.js'
-import { clearSession, saveSession } from '../utils/authStorage.js'
+import { clearSession, saveSession, getToken, getRefreshToken } from '../utils/authStorage.js'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
 
@@ -10,7 +10,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token
+  const token = useAuthStore.getState().token || getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -63,12 +63,17 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
+        const storedRefreshToken = getRefreshToken()
         // Use standard axios instance to refresh to bypass interceptor logic
-        const { data } = await axios.post(`${BASE}/auth/refresh`, {}, { withCredentials: true })
-        const { token, user } = data
+        const { data } = await axios.post(
+          `${BASE}/auth/refresh`,
+          { refreshToken: storedRefreshToken },
+          { withCredentials: true }
+        )
+        const { token, user, refreshToken } = data
 
         useAuthStore.getState().setAuth(user, token)
-        saveSession(user)
+        saveSession(user, token, refreshToken)
 
         originalRequest.headers.Authorization = `Bearer ${token}`
         processQueue(null, token)
@@ -93,3 +98,4 @@ api.interceptors.response.use(
 
 export default api
 export { BASE }
+

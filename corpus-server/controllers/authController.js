@@ -129,6 +129,7 @@ export async function verifyOtp(req, res) {
 
     return res.status(201).json({
       token: accessToken,
+      refreshToken,
       user: formatUser(user),
     })
   } catch (err) {
@@ -211,6 +212,7 @@ export async function login(req, res) {
 
     return res.json({
       token: accessToken,
+      refreshToken,
       user: formatUser(user),
     })
   } catch (err) {
@@ -302,7 +304,7 @@ export async function confirmPasswordSetup(req, res) {
 }
 
 export async function logout(req, res) {
-  const refreshToken = req.cookies.refreshToken
+  const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken || req.headers['x-refresh-token']
   if (refreshToken) {
     try {
       const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET)
@@ -332,7 +334,7 @@ export async function getMe(req, res) {
 }
 
 export async function refresh(req, res) {
-  const refreshToken = req.cookies.refreshToken
+  const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken || req.headers['x-refresh-token']
   if (!refreshToken) {
     return res.status(401).json({ error: 'Refresh token not found.' })
   }
@@ -347,11 +349,13 @@ export async function refresh(req, res) {
     const accessToken = generateAccessToken(user._id)
     const newRefreshToken = generateRefreshToken(user._id)
 
-    // Rotate refresh token
-    user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken)
-    user.refreshTokens.push(newRefreshToken)
-    if (user.refreshTokens.length > 10) {
-      user.refreshTokens = user.refreshTokens.slice(-10)
+    // Rotate refresh token: add new token, keep up to 20 recent active tokens
+    user.refreshTokens = user.refreshTokens || []
+    if (!user.refreshTokens.includes(newRefreshToken)) {
+      user.refreshTokens.push(newRefreshToken)
+    }
+    if (user.refreshTokens.length > 20) {
+      user.refreshTokens = user.refreshTokens.slice(-20)
     }
     await user.save()
 
@@ -359,6 +363,7 @@ export async function refresh(req, res) {
 
     return res.json({
       token: accessToken,
+      refreshToken: newRefreshToken,
       user: formatUser(user),
     })
   } catch (err) {
@@ -392,7 +397,7 @@ export async function googleCallback(req, res) {
     setRefreshTokenCookie(res, refreshToken)
 
     const formattedUser = formatUser(user)
-    const payload = encodeURIComponent(JSON.stringify({ token: accessToken, user: formattedUser }))
+    const payload = encodeURIComponent(JSON.stringify({ token: accessToken, refreshToken, user: formattedUser }))
 
     // Redirect directly to frontend callback page — works in popup AND same tab
     console.log('[googleCallback] Redirecting to:', `${CLIENT_URL}/auth/callback`)
