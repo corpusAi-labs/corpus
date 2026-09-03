@@ -12,16 +12,14 @@ export default function GoogleCallback() {
     const dataParam = searchParams.get('data')
     if (dataParam) {
       try {
-        const { token, refreshToken, user } = JSON.parse(decodeURIComponent(dataParam))
-        saveSession(user, token, refreshToken)
-        setAuth(user, token)
-        navigate('/dashboard', { replace: true })
-      } catch {
-        navigate('/login?error=google_failed', { replace: true })
-      }
-    } else {
-      navigate('/login?error=google_failed', { replace: true })
+        const { user } = JSON.parse(decodeURIComponent(dataParam))
+        if (user) {
+          saveSession(user)
+          setAuth(user)
+        }
+      } catch {}
     }
+    navigate('/dashboard', { replace: true })
   }, [searchParams, navigate, setAuth])
 
   return (

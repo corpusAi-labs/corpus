@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
 import axios from 'axios'
 import useAuthStore from '../store/authStore.js'
-import { isLoggedIn, saveSession, clearSession, getRefreshToken, getStoredUser, getToken, isTokenValid } from '../utils/authStorage.js'
+import { saveSession, clearSession, getStoredUser } from '../utils/authStorage.js'
 import { BASE } from '../api/axios.js'
 
 export default function AuthInit({ children }) {
-  const { setAuth, clearAuth } = useAuthStore()
+  const { setAuth, clearAuth, setLoading } = useAuthStore()
   const ran = useRef(false)
 
   useEffect(() => {
@@ -13,48 +13,37 @@ export default function AuthInit({ children }) {
     ran.current = true
 
     async function restoreSession() {
-      if (!isLoggedIn()) {
-        clearAuth()
-        return
-      }
-
+      // Immediately hydrate cached user profile if present
       const storedUser = getStoredUser()
-      const storedToken = getToken()
-
-      // Ensure Zustand has initial stored data immediately if not already set
-      if (storedUser && storedToken) {
-        setAuth(storedUser, storedToken)
-        // If the access token is still valid, no need to force a refresh call on every reload!
-        if (isTokenValid(storedToken)) {
-          return
-        }
+      if (storedUser) {
+        setAuth(storedUser)
       }
+
+      setLoading(true)
 
       try {
-        const refreshToken = getRefreshToken()
+        // Silently verify session and refresh httpOnly cookies with server
         const { data } = await axios.post(
           `${BASE}/auth/refresh`,
-          { refreshToken },
+          {},
           {
             withCredentials: true,
             timeout: 10000,
           }
         )
-        setAuth(data.user, data.token)
-        saveSession(data.user, data.token, data.refreshToken)
+        setAuth(data.user)
+        saveSession(data.user)
       } catch (err) {
         console.warn('[auth init] session restoration failed:', err.message)
-        // Only clear authentication if explicitly unauthorized/forbidden by backend and token is expired
-        if ((err.response?.status === 401 || err.response?.status === 403) && !isTokenValid(storedToken)) {
-          clearSession()
-          clearAuth()
-        }
+        clearSession()
+        clearAuth()
       }
     }
 
     restoreSession()
-  }, [setAuth, clearAuth])
+  }, [setAuth, clearAuth, setLoading])
 
   return children
 }
+
 

@@ -11,6 +11,15 @@ function generateAccessToken(userId) {
   return jwt.sign({ id: userId }, process.env.ACCESS_SECRET, { expiresIn: '15m' })
 }
 
+function setAccessTokenCookie(res, token){
+  res.cookie('accessToken', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  })
+}
+
 function generateRefreshToken(userId) {
   return jwt.sign({ id: userId }, process.env.REFRESH_SECRET, { expiresIn: '30d' })
 }
@@ -126,10 +135,10 @@ export async function verifyOtp(req, res) {
     await user.save()
 
     setRefreshTokenCookie(res, refreshToken)
+    setAccessTokenCookie(res, accessToken)
 
     return res.status(201).json({
-      token: accessToken,
-      refreshToken,
+      success: true,
       user: formatUser(user),
     })
   } catch (err) {
@@ -209,10 +218,10 @@ export async function login(req, res) {
     await user.save()
 
     setRefreshTokenCookie(res, refreshToken)
+    setAccessTokenCookie(res, accessToken)
 
     return res.json({
-      token: accessToken,
-      refreshToken,
+      success: true,
       user: formatUser(user),
     })
   } catch (err) {
@@ -313,8 +322,14 @@ export async function logout(req, res) {
       console.warn('[logout] token verification or database pull failed:', err.message)
     }
   }
-
+  
   res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  })
+  
+  res.clearCookie('accessToken', {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
@@ -360,10 +375,10 @@ export async function refresh(req, res) {
     await user.save()
 
     setRefreshTokenCookie(res, newRefreshToken)
+    setAccessTokenCookie(res, accessToken)
 
     return res.json({
-      token: accessToken,
-      refreshToken: newRefreshToken,
+      success: true,
       user: formatUser(user),
     })
   } catch (err) {
@@ -371,6 +386,7 @@ export async function refresh(req, res) {
     return res.status(401).json({ error: 'Invalid or expired refresh token.' })
   }
 }
+
 
 export async function googleCallback(req, res) {
   const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
@@ -393,15 +409,14 @@ export async function googleCallback(req, res) {
     }
     await user.save()
 
-    // Set refresh token as httpOnly cookie
+    // 1. Set httpOnly cookies for both tokens
     setRefreshTokenCookie(res, refreshToken)
+    setAccessTokenCookie(res, accessToken)
 
-    const formattedUser = formatUser(user)
-    const payload = encodeURIComponent(JSON.stringify({ token: accessToken, refreshToken, user: formattedUser }))
+    // 2. Redirect directly to frontend dashboard
+    console.log('[googleCallback] Redirecting to:', `${CLIENT_URL}/dashboard`)
+    return res.redirect(`${CLIENT_URL}/dashboard`)
 
-    // Redirect directly to frontend callback page — works in popup AND same tab
-    console.log('[googleCallback] Redirecting to:', `${CLIENT_URL}/auth/callback`)
-    return res.redirect(`${CLIENT_URL}/auth/callback?data=${payload}`)
   } catch (err) {
     console.error('[googleCallback] Error:', err.message)
     return res.redirect(`${CLIENT_URL}/login?error=google_failed`)
