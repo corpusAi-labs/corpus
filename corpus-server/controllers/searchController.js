@@ -13,7 +13,7 @@ export function buildSearchQuery(q) {
 }
 
 /**
- * Simple plain text search with relevance ranking.
+ * Optimized full-text search using MongoDB Text Index with relevance ranking.
  *
  * Query syntax:
  *   GET /api/items/search?q=search+terms&sort=newest
@@ -54,111 +54,55 @@ export async function smartSearch(req, res) {
     }
 
     // ── NON-EMPTY SEARCH ──
-    const terms = buildSearchQuery(q) // gives all terms (array)
-    if (terms.length === 0) {
-      return res.json({ items: [] })
-    }
-
-    // Build the $or regex query to find any matching items
-    const orConditions = terms.flatMap(term => {
-      const escaped = escapeRegex(term)
-      const regex = new RegExp(escaped, 'i')
-      return [
-        { tags: { $regex: regex } },
-        { title: { $regex: regex } },
-        { summary: { $regex: regex } },
-        { note: { $regex: regex } },
-        { url: { $regex: regex } },
-        { content: { $regex: regex } }
-        
-      ]
-    })
-
-    const query = {
+    const limit = Math.min(parseInt(req.query.limit) || 40, 50)
+    const searchQuery = {
       ...baseQuery,
-      $or: orConditions,
+      $text: { $search: q },
     }
 
-    // Respect active filters during search if provided
-    if (req.query.type) query.type = req.query.type
-    if (req.query.tag) query.tags = req.query.tag
-    if (req.query.spaceId) query.spaceId = req.query.spaceId
+    if (req.query.type) searchQuery.type = req.query.type
+    if (req.query.tag) searchQuery.tags = req.query.tag
+    if (req.query.spaceId) searchQuery.spaceId = req.query.spaceId
 
-    // Retrieve matching candidates (up to 500)
-    const matchedItems = await Item.find(query).limit(500)
+    let items = []
+    try {
+      // 1. Primary path: Native MongoDB Inverted Text Index with weights (sub-20ms)
+      items = await Item.find(
+        searchQuery,
+        { score: { $meta: 'textScore' } }
+      )
+        .sort({
+          score: { $meta: 'textScore' },
+          createdAt: sortDirection,
+        })
+        .limit(limit)
+    } catch (textErr) {
+      console.warn('[smartSearch] $text query failed or index rebuilding, falling back to prefix search:', textErr.message)
+    }
 
-    // Score candidates in memory
-    const ranked = matchedItems.map(item => {
-     let uniqueMatchedTerms  = 0
-      let fieldScore = 0
-
-      for (const term of terms) {
-        const escaped = escapeRegex(term)
-        const regex = new RegExp(escaped, 'i')
-        let matchedThisTerm = false
-
-
-         // 1. Note (11 points)
-         // if item has note and term matches that note
-        if (item.note && regex.test(item.note)) {
-          fieldScore += 11
-          matchedThisTerm = true
-        }
-
-        // 2. Tags (10 points)
-        const tagsMatch = (item.tags || []).some(t => regex.test(t))
-        if (tagsMatch) {
-          fieldScore += 10
-          matchedThisTerm = true
-        }
-
-        // 3. Title (8 points)
-        if (item.title && regex.test(item.title)) {
-          fieldScore += 8
-          matchedThisTerm = true
-        }
-
-        // 4. URL (5 points)
-        if (item.url && regex.test(item.url)) {
-          fieldScore += 5
-          matchedThisTerm = true
-        }
-
-        // 5. Summary (3 points)
-        if (item.summary && regex.test(item.summary)) {
-          fieldScore += 3
-          matchedThisTerm = true
-        }
-
-        // 6. Content (1 point)
-        if (item.content && regex.test(item.content)) {
-          fieldScore += 1
-          matchedThisTerm = true
-        }
-
-
-        if (matchedThisTerm) {
-          uniqueMatchedTerms++
-        }
+    // 2. Fallback path: If $text yielded no results (e.g. short partial words like "rea" before finishing "react")
+    if (items.length === 0 && q.length >= 2) {
+      const escaped = escapeRegex(q)
+      const regex = new RegExp(escaped, 'i')
+      const fallbackQuery = {
+        ...baseQuery,
+        $or: [
+          { title: { $regex: regex } },
+          { tags: { $regex: regex } },
+          { summary: { $regex: regex } },
+          { note: { $regex: regex } },
+        ],
       }
+      if (req.query.type) fallbackQuery.type = req.query.type
+      if (req.query.tag) fallbackQuery.tags = req.query.tag
+      if (req.query.spaceId) fallbackQuery.spaceId = req.query.spaceId
 
-      // Relevance score weights matching more search terms highest
-      const score = (uniqueMatchedTerms * 100) + fieldScore
-      return { item, score }
-    })
+      items = await Item.find(fallbackQuery)
+        .sort({ createdAt: sortDirection })
+        .limit(limit)
+    }
 
-    // Sort by relevance score primarily, and createdAt secondarily
-    ranked.sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score
-      }
-      const timeA = new Date(a.item.createdAt).getTime()
-      const timeB = new Date(b.item.createdAt).getTime()
-      return sortDirection === 1 ? timeA - timeB : timeB - timeA
-    })
-
-    const finalItems = ranked.map(r => r.item).slice(0, 40)
-    return res.json({ items: finalItems })
+    return res.json({ items })
   } catch (err) {
     console.error('[smartSearch]', err.message)
     return res.status(500).json({ error: 'Search failed', details: err.message })

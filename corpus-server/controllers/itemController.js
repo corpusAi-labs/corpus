@@ -80,21 +80,6 @@ export async function createItem(req, res) {
 
   
   try {
-    // ── ATOMIC CREDIT DEDUCTION ──
-    const user = await User.findOneAndUpdate(
-      { _id: req.user.id, credits: { $gt: 0 } }
-     
-    )
-    if (!user) {
-      const exists = await User.findById(req.user.id)
-      if (!exists) return res.status(401).json({ error: 'User not found' })
-      return res.status(402).json({
-        error: 'NO_CREDITS',
-        message: 'You have used all your saves. Upgrade your plan to keep saving.',
-      })
-    }
-    
-
     let itemData = {
       userId: req.user.id,
       type, title, content, thumbnailUrl,
@@ -130,19 +115,34 @@ export async function createItem(req, res) {
     if (type === 'image' && !thumbnailUrl) {
       return res.status(400).json({ error: 'thumbnailUrl is required for images' })
     }
-     //deduct credit
-     await User.findByIdAndUpdate(
-      req.user.id,
-      {
-        $inc: {
-          credits: -1
-        }
-      }
-    )
 
-    // Save the item
-    const item = await Item.create(itemData)
-    res.status(201).json({ item })
+    // ── ATOMIC CREDIT DEDUCTION ──
+    // Atomically checks credits > 0 and decrements by 1 in a single MongoDB command
+    const user = await User.findOneAndUpdate(
+      { _id: req.user.id, credits: { $gt: 0 } },
+      { $inc: { credits: -1 } },
+      { new: true }
+    )
+    if (!user) {
+      const exists = await User.findById(req.user.id)
+      if (!exists) return res.status(401).json({ error: 'User not found' })
+      return res.status(402).json({
+        error: 'NO_CREDITS',
+        message: 'You have used all your saves. Upgrade your plan to keep saving.',
+      })
+    }
+
+    // Save the item with refund rollback if creation fails
+    let item
+    try {
+      item = await Item.create(itemData)
+    } catch (createErr) {
+      // Refund the deducted credit if DB write fails
+      await User.findByIdAndUpdate(req.user.id, { $inc: { credits: 1 } })
+      throw createErr
+    }
+
+    res.status(201).json({ item, remainingCredits: user.credits })
 
     // Kick off AI processing in the background asynchronously
     processItemAI(item).catch(err => {
