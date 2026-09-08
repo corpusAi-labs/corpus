@@ -29,7 +29,10 @@ async function getBrowser() {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-accelerated-2d-canvas',
+        '--no-zygote',
+        '--single-process',
       ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     })
     return browserInstance
   } catch (err) {
@@ -40,8 +43,9 @@ async function getBrowser() {
 }
 
 /**
- * Capture an ultra-lightweight (30-60KB) desktop viewport screenshot
- * avoiding heavy full-page storage or Cloudinary bloat.
+ * Capture an ultra-lightweight (30-60KB) desktop viewport screenshot.
+ * In production, uploads to Cloudinary (if configured) for global HTTPS access,
+ * or falls back to a hosted screenshot URL if the container lacks Chromium.
  *
  * @param {string} url - Target website URL
  * @returns {Promise<string|null>} - URL to access the screenshot
@@ -50,12 +54,14 @@ export async function captureWebpageScreenshot(url) {
   let page = null
   try {
     const browser = await getBrowser()
-    if (!browser) return null
+    if (!browser) {
+      // Reliable fallback if Puppeteer cannot run on host container (e.g. Render free tier)
+      return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`
+    }
 
     page = await browser.newPage()
 
     // 1. Set fixed desktop viewport (1200x750) at 1x scale
-    // This captures the hero & navigation like mymind without massive vertical bloat
     await page.setViewport({
       width: 1200,
       height: 750,
@@ -82,9 +88,7 @@ export async function captureWebpageScreenshot(url) {
     await page.goto(url, {
       waitUntil: 'load',
       timeout: 9000,
-    }).catch(() => {
-      // If load times out or partial, proceed with whatever is rendered
-    })
+    }).catch(() => {})
 
     // Small delay to let JS/fonts settle
     await new Promise((resolve) => setTimeout(resolve, 800))
@@ -97,8 +101,9 @@ export async function captureWebpageScreenshot(url) {
     })
 
     // 4. Storage strategy:
-    // If Cloudinary is explicitly configured with credentials and enabled
-    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.UPLOAD_SCREENSHOTS_TO_CLOUDINARY === 'true') {
+    // If Cloudinary is available (standard on production), upload buffer directly
+    // This gives a secure HTTPS URL that works on Vercel, mobile, and everywhere.
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
       try {
         const cloudinaryUrl = await uploadBuffer(buffer, 'corpus/screenshots')
         return cloudinaryUrl
@@ -107,17 +112,18 @@ export async function captureWebpageScreenshot(url) {
       }
     }
 
-    // Default: Store locally in /uploads/screenshots (100% free, 0 storage cost)
+    // Otherwise store locally in /uploads/screenshots
     const hash = crypto.createHash('md5').update(url).digest('hex')
     const filename = `${hash}.webp`
     const filePath = path.join(UPLOADS_DIR, filename)
     await fs.promises.writeFile(filePath, buffer)
 
-    const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5001}`
+    const serverUrl = process.env.SERVER_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 5001}`
     return `${serverUrl}/uploads/screenshots/${filename}`
   } catch (err) {
     console.error('[screenshot] Failed to capture screenshot for', url, ':', err.message)
-    return null
+    // Production fallback if screenshot capture encounters an error
+    return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`
   } finally {
     if (page) {
       try {

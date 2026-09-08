@@ -4,6 +4,16 @@ import { useQuery } from '@tanstack/react-query'
 import api from '../../api/axios.js'
 import { fetchSpaces } from '../../api/spaces.js'
 
+function getDisplayThumbnail(thumbnailUrl, itemUrl) {
+  if (!thumbnailUrl) return null
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && thumbnailUrl.includes('localhost:')) {
+    if (itemUrl) {
+      return `https://api.microlink.io/?url=${encodeURIComponent(itemUrl)}&screenshot=true&embed=screenshot.url`
+    }
+  }
+  return thumbnailUrl
+}
+
 function truncate(text, max = 180) {
   if (!text) return text
   return text.length > max ? text.slice(0, max).trimEnd() + '...' : text
@@ -122,37 +132,40 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
 
         {/* Content Section based on type */}
         <div className="flex-1 flex flex-col gap-2 mt-2">
-          {type === 'link' && (
-            <>
-              {item.thumbnailUrl ? (
-                <div className="relative rounded-md overflow-hidden border border-gray-100 max-h-32 mb-1">
-                  <img
-                    src={item.thumbnailUrl}
-                    alt=""
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    loading="lazy"
-                    onError={e => e.target.style.display = 'none'}
-                  />
-                </div>
-              ) : (
-                <div
-                  className="rounded-md w-full flex items-center justify-center h-[60px] mb-1 opacity-90 group-hover:opacity-100 transition-opacity border border-black/10"
-                  style={{ backgroundColor: spaceColor || '#000000' }}
-                >
-                  <span className="text-white text-[11px] font-bold tracking-wide uppercase font-circular px-3 truncate">
-                    {item.title || domain || 'Link'}
-                  </span>
-                </div>
-              )}
-              {item.title && <h3 className="text-[13px] font-bold text-gray-900 font-roc line-clamp-2">{item.title}</h3>}
-              {domain && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[11px] text-gray-400 font-circular truncate">{domain}</span>
-                  {item.url && <FiExternalLink className="text-[10px] text-gray-400 group-hover:text-black transition-colors" />}
-                </div>
-              )}
-            </>
-          )}
+          {type === 'link' && (() => {
+            const displayThumbnail = getDisplayThumbnail(item.thumbnailUrl, item.url)
+            return (
+              <>
+                {displayThumbnail ? (
+                  <div className="relative rounded-md overflow-hidden border border-gray-100 max-h-32 mb-1">
+                    <img
+                      src={displayThumbnail}
+                      alt=""
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      loading="lazy"
+                      onError={e => e.target.style.display = 'none'}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-md w-full flex items-center justify-center h-[60px] mb-1 opacity-90 group-hover:opacity-100 transition-opacity border border-black/10"
+                    style={{ backgroundColor: spaceColor || '#000000' }}
+                  >
+                    <span className="text-white text-[11px] font-bold tracking-wide uppercase font-circular px-3 truncate">
+                      {item.title || domain || 'Link'}
+                    </span>
+                  </div>
+                )}
+                {item.title && <h3 className="text-[13px] font-bold text-gray-900 font-roc line-clamp-2">{item.title}</h3>}
+                {domain && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-gray-400 font-circular truncate">{domain}</span>
+                    {item.url && <FiExternalLink className="text-[10px] text-gray-400 group-hover:text-black transition-colors" />}
+                  </div>
+                )}
+              </>
+            )
+          })()}
 
           {type === 'image' && (
             <>

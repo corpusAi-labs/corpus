@@ -176,10 +176,17 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
 
             {/* content area */}
             <div className="flex-1 overflow-y-auto">
-              {(isLink || isImage) && item.thumbnailUrl && (
-                <img src={item.thumbnailUrl} alt="" className="w-full h-auto object-cover"
-                  onError={e => e.target.style.display = 'none'} />
-              )}
+              {(() => {
+                const displayThumbnail = (isLink || isImage) && item.thumbnailUrl
+                  ? (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && item.thumbnailUrl.includes('localhost:') && item.url
+                      ? `https://api.microlink.io/?url=${encodeURIComponent(item.url)}&screenshot=true&embed=screenshot.url`
+                      : item.thumbnailUrl)
+                  : null
+                return displayThumbnail ? (
+                  <img src={displayThumbnail} alt="" className="w-full h-auto object-cover"
+                    onError={e => e.target.style.display = 'none'} />
+                ) : null
+              })()}
               {item.title && (
                 <div className="px-6 pt-5 pb-2">
                   <h2 className="font-serif text-[22px] leading-snug text-ink">{item.title}</h2>
