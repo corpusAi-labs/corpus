@@ -1,0 +1,128 @@
+import puppeteer from 'puppeteer'
+import path from 'path'
+import fs from 'fs'
+import crypto from 'crypto'
+import { fileURLToPath } from 'url'
+import { uploadBuffer } from './cloudinary.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'screenshots')
+
+// Ensure uploads/screenshots directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true })
+}
+
+let browserInstance = null
+
+async function getBrowser() {
+  if (browserInstance && browserInstance.connected) {
+    return browserInstance
+  }
+
+  try {
+    browserInstance = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-accelerated-2d-canvas',
+      ],
+    })
+    return browserInstance
+  } catch (err) {
+    console.error('[screenshot] Failed to launch Puppeteer browser:', err.message)
+    browserInstance = null
+    return null
+  }
+}
+
+/**
+ * Capture an ultra-lightweight (30-60KB) desktop viewport screenshot
+ * avoiding heavy full-page storage or Cloudinary bloat.
+ *
+ * @param {string} url - Target website URL
+ * @returns {Promise<string|null>} - URL to access the screenshot
+ */
+export async function captureWebpageScreenshot(url) {
+  let page = null
+  try {
+    const browser = await getBrowser()
+    if (!browser) return null
+
+    page = await browser.newPage()
+
+    // 1. Set fixed desktop viewport (1200x750) at 1x scale
+    // This captures the hero & navigation like mymind without massive vertical bloat
+    await page.setViewport({
+      width: 1200,
+      height: 750,
+      deviceScaleFactor: 1,
+    })
+
+    // Set standard browser user agent
+    await page.setUserAgent(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    )
+
+    // Block unnecessary media streams to speed up rendering
+    await page.setRequestInterception(true)
+    page.on('request', (req) => {
+      const type = req.resourceType()
+      if (type === 'media' || type === 'websocket') {
+        req.abort()
+      } else {
+        req.continue()
+      }
+    })
+
+    // 2. Navigate with safe 9s timeout
+    await page.goto(url, {
+      waitUntil: 'load',
+      timeout: 9000,
+    }).catch(() => {
+      // If load times out or partial, proceed with whatever is rendered
+    })
+
+    // Small delay to let JS/fonts settle
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // 3. Take compressed WebP screenshot (NOT fullPage to keep under 60KB)
+    const buffer = await page.screenshot({
+      type: 'webp',
+      quality: 70,
+      fullPage: false,
+    })
+
+    // 4. Storage strategy:
+    // If Cloudinary is explicitly configured with credentials and enabled
+    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.UPLOAD_SCREENSHOTS_TO_CLOUDINARY === 'true') {
+      try {
+        const cloudinaryUrl = await uploadBuffer(buffer, 'corpus/screenshots')
+        return cloudinaryUrl
+      } catch (cloudErr) {
+        console.warn('[screenshot] Cloudinary upload failed, falling back to local:', cloudErr.message)
+      }
+    }
+
+    // Default: Store locally in /uploads/screenshots (100% free, 0 storage cost)
+    const hash = crypto.createHash('md5').update(url).digest('hex')
+    const filename = `${hash}.webp`
+    const filePath = path.join(UPLOADS_DIR, filename)
+    await fs.promises.writeFile(filePath, buffer)
+
+    const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5001}`
+    return `${serverUrl}/uploads/screenshots/${filename}`
+  } catch (err) {
+    console.error('[screenshot] Failed to capture screenshot for', url, ':', err.message)
+    return null
+  } finally {
+    if (page) {
+      try {
+        await page.close()
+      } catch {}
+    }
+  }
+}

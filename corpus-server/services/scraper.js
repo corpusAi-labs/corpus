@@ -1,4 +1,19 @@
 import ogs from 'open-graph-scraper'
+import { captureWebpageScreenshot } from './screenshot.js'
+
+function cleanHtmlText(raw) {
+  if (!raw) return ''
+  return raw
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\b([A-Za-z])(?:\s+[A-Za-z]){2,}\b/g, (match) => match.replace(/\s+/g, ''))
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 export async function scrapeUrl(url) {
   const domain = (() => {
@@ -45,19 +60,51 @@ export async function scrapeUrl(url) {
     console.warn('[scraper] manual text extraction failed or timed out:', err.message)
   }
 
-  const title = ogResult.ogTitle || ogResult.twitterTitle || domain
-  const description = ogResult.ogDescription || ogResult.twitterDescription || ''
-  
-  // Use the extracted body text if available, fallback to metadata description
-  const content = (extractedText && extractedText.length > description.length)
-    ? extractedText
-    : description
+  const title = cleanHtmlText(ogResult.ogTitle || ogResult.twitterTitle || domain)
+  const metaDescription = cleanHtmlText(ogResult.ogDescription || ogResult.twitterDescription || '')
+  const cleanExtracted = cleanHtmlText(extractedText)
+
+  // Prioritize the site's official clean description if available (at least 15 chars).
+  // Otherwise, fallback to the cleaned body text.
+  const content = (metaDescription && metaDescription.length >= 15)
+    ? metaDescription
+    : (cleanExtracted || metaDescription)
+
+  // Extract genuine thumbnail if available, filtering out icons, svgs, and 1x1 spacer gifs
+  let thumbnailUrl = null
+  const imgObj = ogResult.ogImage?.[0] || ogResult.twitterImage?.[0]
+  const rawImage = imgObj?.url
+
+  if (rawImage) {
+    const isSvg = imgObj?.type === 'svg' || /\.svg(\?.*)?$/i.test(rawImage)
+    const isIco = /\.ico(\?.*)?$/i.test(rawImage)
+    const isTiny = (imgObj?.width && imgObj.width < 150) || (imgObj?.height && imgObj.height < 100)
+    const isSpacer = /trans_1x1|spacer|1x1|pixel/i.test(rawImage)
+    const isFavicon = ogResult.favicon && (rawImage === ogResult.favicon || rawImage.includes('favicon'))
+
+    if (!isSvg && !isIco && !isTiny && !isSpacer && !isFavicon) {
+      try {
+        thumbnailUrl = new URL(rawImage, url).href
+      } catch {
+        thumbnailUrl = rawImage
+      }
+    }
+  }
+
+  // If no legitimate thumbnail image is provided by the page, capture a lightweight screenshot via Headless Chrome
+  if (!thumbnailUrl) {
+    try {
+      thumbnailUrl = await captureWebpageScreenshot(url)
+    } catch (err) {
+      console.warn('[scraper] Screenshot capture failed:', err.message)
+    }
+  }
 
   return {
     title,
-    description,
+    description: metaDescription,
     content, // This will be stored in the item's content field
-    thumbnailUrl: ogResult.ogImage?.[0]?.url || ogResult.twitterImage?.[0]?.url || null,
+    thumbnailUrl,
     faviconUrl: ogResult.favicon
       ? new URL(ogResult.favicon, url).href
       : `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,

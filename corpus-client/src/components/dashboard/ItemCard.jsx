@@ -203,15 +203,22 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
 
         {/* Footer (tags + quick delete) */}
         <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-50 relative">
-          <div className="flex gap-1 flex-wrap max-w-[80%]">
-            {item.tags && item.tags.slice(0, 3).map(tag => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-circular bg-gray-100 text-gray-600 group-hover:bg-black/5"
-              >
-                {tag}
-              </span>
-            ))}
+          <div className="flex items-center gap-1.5 min-w-0 max-w-[80%] overflow-hidden">
+            {item.tags && item.tags.length > 0 && (
+              <>
+                <span
+                  key={item.tags[0]}
+                  className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-circular bg-gray-100 text-gray-600 group-hover:bg-black/5 truncate"
+                >
+                  {item.tags[0]}
+                </span>
+                {item.tags.length > 1 && (
+                  <span className="text-[9px] font-bold text-gray-400 font-circular shrink-0">
+                    +{item.tags.length - 1}
+                  </span>
+                )}
+              </>
+            )}
           </div>
 
           {onDelete && !isPending ? (

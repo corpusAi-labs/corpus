@@ -4,6 +4,21 @@ import { updateItem, deleteItem, retryItemAI } from '../../api/items.js'
 import api from '../../api/axios.js'
 import SpacePicker from '../spaces/SpacePicker.jsx'
 
+function cleanTextContent(raw) {
+  if (!raw) return ''
+  return raw
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    // Fix spaced out characters from animated spans like "T w i t t e r" -> "Twitter"
+    .replace(/\b([A-Za-z])(?:\s+[A-Za-z]){2,}\b/g, (match) => match.replace(/\s+/g, ''))
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export default function DetailPanel({ item: initialItem, onClose, onDelete, onUpdate }) {
   const [item, setItem] = useState(initialItem)
   const [tags, setTags] = useState(initialItem?.tags || [])
@@ -13,6 +28,7 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
   const [retrying, setRetrying] = useState(false)
   const [tagInput, setTagInput] = useState('')
   const [addingTag, setAddingTag] = useState(false)
+  const [expandedDesc, setExpandedDesc] = useState(false)
   const tagInputRef = useRef(null)
   const noteTimer = useRef(null)
   const pollRef = useRef(null)
@@ -24,6 +40,7 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
     setNote(initialItem?.note || '')
     setSpaceId(initialItem?.spaceId || null)
     setShowRetry(false)
+    setExpandedDesc(false)
   }, [initialItem?._id])
 
   // poll for AI results if summary missing
@@ -168,9 +185,32 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
                   <h2 className="font-serif text-[22px] leading-snug text-ink">{item.title}</h2>
                 </div>
               )}
-              {isLink && item.content && (
-                <p className="px-6 pb-4 text-[14px] leading-relaxed text-muted">{item.content}</p>
-              )}
+              {isLink && item.content && (() => {
+                const cleaned = cleanTextContent(item.content)
+                const isLong = cleaned.length > 200
+                return (
+                  <div className="mx-6 mb-6 mt-1 p-4 rounded-xl bg-white/90 border border-line shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-sm">
+                    <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-line/60">
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-muted flex items-center gap-1.5 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                        Page Excerpt
+                      </span>
+                      {isLong && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedDesc(!expandedDesc)}
+                          className="font-mono text-[10px] text-muted hover:text-ink transition-colors cursor-pointer"
+                        >
+                          {expandedDesc ? 'Show less' : 'Show full'}
+                        </button>
+                      )}
+                    </div>
+                    <p className={`text-[13.5px] leading-relaxed text-ink/85 font-serif transition-all ${!expandedDesc && isLong ? 'line-clamp-3' : ''}`}>
+                      {cleaned}
+                    </p>
+                  </div>
+                )
+              })()}
               {isText && item.content && (
                 <div className="px-6 py-4">
                   <p className={`text-[15px] leading-relaxed text-ink ${item.type === 'quote' ? 'font-serif italic border-l-2 border-line pl-4' : ''}`}>
