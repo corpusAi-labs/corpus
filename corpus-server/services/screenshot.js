@@ -89,21 +89,20 @@ export async function captureWebpageScreenshot(url) {
     })
 
     // 4. Storage strategy:
-    // Upload the in-memory buffer directly to Cloudinary (never save to backend disk)
+    // Upload the in-memory buffer directly to Cloudinary
     if (process.env.CLOUDINARY_CLOUD_NAME) {
       try {
         const cloudinaryUrl = await uploadBuffer(buffer, 'corpus/screenshots')
         return cloudinaryUrl
       } catch (cloudErr) {
-        console.warn('[screenshot] Cloudinary upload failed, falling back to hosted snapshot:', cloudErr.message)
+        console.warn('[screenshot] Cloudinary upload failed:', cloudErr.message)
       }
     }
 
-    // Fallback if Cloudinary is not configured: use hosted URL directly (zero backend disk storage)
-    return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`
+    return null
   } catch (err) {
-    console.error('[screenshot] Failed to capture screenshot for', url, ':', err.message)
-    return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`
+    console.warn('[screenshot] Headless screenshot failed for', url, ':', err.message)
+    return null
   } finally {
     if (page) {
       try {

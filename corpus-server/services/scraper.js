@@ -90,41 +90,43 @@ async function checkImageAlive(imgUrl) {
   }
 }
 
-  // Extract genuine thumbnail if available, filtering out icons, svgs, logos, and dead images
+  // 1. First priority: Capture a real webpage screenshot
   let thumbnailUrl = null
-  const imgObj = ogResult.ogImage?.[0] || ogResult.twitterImage?.[0]
-  const rawImage = imgObj?.url
-
-  if (rawImage) {
-    const isSvg = imgObj?.type === 'svg' || /\.svg(\?.*)?$/i.test(rawImage)
-    const isIco = /\.ico(\?.*)?$/i.test(rawImage)
-    const isTiny = (imgObj?.width && imgObj.width < 150) || (imgObj?.height && imgObj.height < 100)
-    const isSpacer = /trans_1x1|spacer|1x1|pixel/i.test(rawImage)
-    const isFavicon = ogResult.favicon && (rawImage === ogResult.favicon || rawImage.includes('favicon'))
-    const isLogo = /brand-logo|logo-brand|site-logo|^logo|\/logo/i.test(rawImage)
-
-    if (!isSvg && !isIco && !isTiny && !isSpacer && !isFavicon && !isLogo) {
-      let candidate = null
-      try {
-        candidate = new URL(rawImage, url).href
-      } catch {
-        candidate = rawImage
-      }
-
-      // Verify the candidate image is actually reachable and not a dead link or HTML error page
-      const isAlive = await checkImageAlive(candidate)
-      if (isAlive) {
-        thumbnailUrl = candidate
-      }
-    }
+  try {
+    thumbnailUrl = await captureWebpageScreenshot(url)
+  } catch (err) {
+    console.warn('[scraper] Screenshot capture failed, falling back to HTML image:', err.message)
   }
 
-  // If no legitimate thumbnail image is provided by the page, capture a lightweight screenshot via Headless Chrome
+  // 2. If and only if the screenshot failed, look for image / thumbnail in HTML metadata
   if (!thumbnailUrl) {
-    try {
-      thumbnailUrl = await captureWebpageScreenshot(url)
-    } catch (err) {
-      console.warn('[scraper] Screenshot capture failed:', err.message)
+    const imgObj = ogResult.ogImage?.[0] || ogResult.twitterImage?.[0]
+    const rawImage = imgObj?.url
+
+    if (rawImage) {
+      const isSvg = imgObj?.type === 'svg' || /\.svg(\?.*)?$/i.test(rawImage)
+      const isIco = /\.ico(\?.*)?$/i.test(rawImage)
+      const isTiny = (imgObj?.width && imgObj.width < 100) || (imgObj?.height && imgObj.height < 60)
+      const isSpacer = /trans_1x1|spacer|1x1|pixel/i.test(rawImage)
+
+      if (!isSvg && !isIco && !isTiny && !isSpacer) {
+        let candidate = null
+        try {
+          candidate = new URL(rawImage, url).href
+        } catch {
+          candidate = rawImage
+        }
+
+        const isAlive = await checkImageAlive(candidate)
+        if (isAlive) {
+          thumbnailUrl = candidate
+        }
+      }
+    }
+
+    // 3. Fallback to hosted snapshot if neither screenshot nor HTML image was found
+    if (!thumbnailUrl) {
+      thumbnailUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`
     }
   }
 
