@@ -70,7 +70,27 @@ export async function scrapeUrl(url) {
     ? metaDescription
     : (cleanExtracted || metaDescription)
 
-  // Extract genuine thumbnail if available, filtering out icons, svgs, and 1x1 spacer gifs
+async function checkImageAlive(imgUrl) {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2500)
+    const res = await fetch(imgUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Range': 'bytes=0-50'
+      },
+      signal: controller.signal
+    })
+    clearTimeout(timeout)
+    const ct = res.headers.get('content-type') || ''
+    return res.ok && ct.startsWith('image/')
+  } catch {
+    return false
+  }
+}
+
+  // Extract genuine thumbnail if available, filtering out icons, svgs, logos, and dead images
   let thumbnailUrl = null
   const imgObj = ogResult.ogImage?.[0] || ogResult.twitterImage?.[0]
   const rawImage = imgObj?.url
@@ -81,12 +101,20 @@ export async function scrapeUrl(url) {
     const isTiny = (imgObj?.width && imgObj.width < 150) || (imgObj?.height && imgObj.height < 100)
     const isSpacer = /trans_1x1|spacer|1x1|pixel/i.test(rawImage)
     const isFavicon = ogResult.favicon && (rawImage === ogResult.favicon || rawImage.includes('favicon'))
+    const isLogo = /brand-logo|logo-brand|site-logo|^logo|\/logo/i.test(rawImage)
 
-    if (!isSvg && !isIco && !isTiny && !isSpacer && !isFavicon) {
+    if (!isSvg && !isIco && !isTiny && !isSpacer && !isFavicon && !isLogo) {
+      let candidate = null
       try {
-        thumbnailUrl = new URL(rawImage, url).href
+        candidate = new URL(rawImage, url).href
       } catch {
-        thumbnailUrl = rawImage
+        candidate = rawImage
+      }
+
+      // Verify the candidate image is actually reachable and not a dead link or HTML error page
+      const isAlive = await checkImageAlive(candidate)
+      if (isAlive) {
+        thumbnailUrl = candidate
       }
     }
   }

@@ -143,7 +143,13 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
                       alt=""
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                       loading="lazy"
-                      onError={e => e.target.style.display = 'none'}
+                      onError={e => {
+                        if (item.url && !e.target.src.includes('microlink.io')) {
+                          e.target.src = `https://api.microlink.io/?url=${encodeURIComponent(item.url)}&screenshot=true&embed=screenshot.url`
+                        } else if (e.target.parentElement) {
+                          e.target.parentElement.style.display = 'none'
+                        }
+                      }}
                     />
                   </div>
                 ) : (
