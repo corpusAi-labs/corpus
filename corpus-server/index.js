@@ -8,11 +8,8 @@ import { connectDB } from './config/db.js'
 import authRoutes from './routes/auth.js'
 import itemRoutes from './routes/items.js'
 import uploadRoutes from './routes/upload.js'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import spaceRoutes from './routes/spaces.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 5001
 
@@ -52,8 +49,6 @@ app.use(express.json())
 app.use(cookieParser())
 app.use(passport.initialize())
 
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'corpus-server' })

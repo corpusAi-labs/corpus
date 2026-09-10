@@ -1,17 +1,5 @@
 import puppeteer from 'puppeteer'
-import path from 'path'
-import fs from 'fs'
-import crypto from 'crypto'
-import { fileURLToPath } from 'url'
 import { uploadBuffer } from './cloudinary.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'screenshots')
-
-// Ensure uploads/screenshots directory exists
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true })
-}
 
 let browserInstance = null
 
@@ -101,28 +89,20 @@ export async function captureWebpageScreenshot(url) {
     })
 
     // 4. Storage strategy:
-    // If Cloudinary is available (standard on production), upload buffer directly
-    // This gives a secure HTTPS URL that works on Vercel, mobile, and everywhere.
+    // Upload the in-memory buffer directly to Cloudinary (never save to backend disk)
     if (process.env.CLOUDINARY_CLOUD_NAME) {
       try {
         const cloudinaryUrl = await uploadBuffer(buffer, 'corpus/screenshots')
         return cloudinaryUrl
       } catch (cloudErr) {
-        console.warn('[screenshot] Cloudinary upload failed, falling back to local:', cloudErr.message)
+        console.warn('[screenshot] Cloudinary upload failed, falling back to hosted snapshot:', cloudErr.message)
       }
     }
 
-    // Otherwise store locally in /uploads/screenshots
-    const hash = crypto.createHash('md5').update(url).digest('hex')
-    const filename = `${hash}.webp`
-    const filePath = path.join(UPLOADS_DIR, filename)
-    await fs.promises.writeFile(filePath, buffer)
-
-    const serverUrl = process.env.SERVER_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 5001}`
-    return `${serverUrl}/uploads/screenshots/${filename}`
+    // Fallback if Cloudinary is not configured: use hosted URL directly (zero backend disk storage)
+    return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`
   } catch (err) {
     console.error('[screenshot] Failed to capture screenshot for', url, ':', err.message)
-    // Production fallback if screenshot capture encounters an error
     return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&embed=screenshot.url`
   } finally {
     if (page) {
