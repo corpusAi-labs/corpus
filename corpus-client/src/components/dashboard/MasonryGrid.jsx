@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import ItemCard from './ItemCard.jsx'
+import SavingCard from './SavingCard.jsx'
 
-export default function MasonryGrid({ items, onCardClick, onDelete, onLoadMore, hasMore, isLoading }) {
+export default function MasonryGrid({ items, onCardClick, onDelete, onLoadMore, hasMore, isLoading, isSaving }) {
   const sentinelRef = useRef(null)
 
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function MasonryGrid({ items, onCardClick, onDelete, onLoadMore, 
     return () => observer.disconnect()
   }, [hasMore, isLoading, onLoadMore])
 
-  if (!items.length && !isLoading) {
+  if (!items.length && !isLoading && !isSaving) {
     return (
       <div className="py-24 text-center">
         <p className="font-serif text-[20px] mb-2">Nothing here yet.</p>
@@ -28,6 +29,9 @@ export default function MasonryGrid({ items, onCardClick, onDelete, onLoadMore, 
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
         <AnimatePresence mode="popLayout">
+          {isSaving && (
+            <SavingCard key="saving-card-placeholder" />
+          )}
           {items.map(item => (
             <ItemCard key={item._id} item={item} onClick={onCardClick} onDelete={onDelete} />
           ))}

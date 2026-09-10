@@ -119,15 +119,7 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
           >
             {type}
           </span>
-          <div className="flex items-center gap-1.5">
-            {isPending && (
-              <span className="font-mono text-[9px] uppercase tracking-wider text-[#9439f9] animate-pulse flex items-center gap-1 font-bold">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#9439f9] animate-ping" />
-                scanning
-              </span>
-            )}
-            <span className="text-[10px] text-gray-400 font-circular">{timeAgo(item.createdAt)}</span>
-          </div>
+          <span className="text-[10px] text-gray-400 font-circular">{timeAgo(item.createdAt)}</span>
         </div>
 
         {/* Content Section based on type */}

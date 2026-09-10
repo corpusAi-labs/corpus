@@ -33,18 +33,16 @@ export default function SaveComposer({ isOpen, onClose, onSave, isSaving }) {
     setImagePreview(URL.createObjectURL(file))
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  function handleSubmit(e) {
+    if (e) e.preventDefault()
     setError('')
     if (type === 'link' && !url.trim()) return setError('Paste a URL.')
     if ((type === 'note' || type === 'quote') && !content.trim()) return setError('Write something.')
     if (type === 'image' && !imageFile) return setError('Choose an image.')
-    try {
-      await onSave({ type, url, content, title, imageFile, spaceId })
-      reset()
-    } catch (err) {
-      setError(err?.response?.data?.error || 'Something went wrong.')
-    }
+
+    // Close the composer immediately so the user can see the animated saving card in the grid
+    onSave({ type, url, content, title, imageFile, spaceId })
+    handleClose()
   }
 
   const activeColor = TYPES.find(t => t.value === type)?.color || '#0d5ddf'

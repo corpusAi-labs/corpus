@@ -407,6 +407,7 @@ export default function Dashboard() {
                 onLoadMore={() => itemsQuery.fetchNextPage()}
                 hasMore={!isSearching && itemsQuery.hasNextPage}
                 isLoading={isLoading}
+                isSaving={saveMutation.isPending}
               />
             </div>
           )}
