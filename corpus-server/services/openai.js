@@ -7,12 +7,11 @@ const client = new Groq({
 // try these in order — if the primary model is deprecated/renamed by Groq,
 // fall back automatically instead of failing outright
 const MODELS = [
-  'groq/compound-mini',
-  'groq/compound',
-  'qwen/qwen3.6-27b',
-  'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
+  'openai/gpt-oss-120b',
+  'qwen/qwen3.8-27b',
 ]
+
 
 export function detectContentType(url) {
   if (!url) return 'webpage'
@@ -49,7 +48,7 @@ async function callGroq(messages) {
         console.log(`[ai] calling Groq with model=${model} attempt=${attempt}`)
         const result = await client.chat.completions.create({
           model,
-          max_tokens: 300,
+          max_tokens: 1000,
           temperature: 0.2,
           response_format: { type: 'json_object' },
           messages,

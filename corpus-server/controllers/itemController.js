@@ -4,6 +4,7 @@ import Item from '../models/Item.js'
 import User from '../models/User.js'
 import { scrapeUrl } from '../services/scraper.js'
 import { generateSummaryAndTags } from '../services/openai.js'
+import { buildItemEmbeddingText, generateEmbedding } from '../services/embedding.js'
 
 const createItemSchema = z.object({
   type: z.enum(['link', 'image', 'note', 'quote']),
@@ -56,6 +57,28 @@ export async function processItemAI(item) {
         console.warn(`[ai] item ${itemId} processing completed with failure (aiFailed: true)`)
       } else {
         console.log(`[ai] item ${itemId} successfully completed processing: status=ready, aiFailed=false`)
+      }
+
+      // Generate 768-dim vector embedding for Deep Recall
+      try {
+        const textToEmbed = buildItemEmbeddingText({
+          title: updatedItem.title || title,
+          contentType: updatedItem.contentType || contentType,
+          tags: updatedItem.tags || tags,
+          summary: updatedItem.summary || summary,
+          note: currentItem.note,
+          content: currentItem.content,
+          url: currentItem.url,
+        })
+        if (textToEmbed) {
+          const embedding = await generateEmbedding(textToEmbed, 'RETRIEVAL_DOCUMENT')
+          if (embedding) {
+            await Item.updateOne({ _id: item._id }, { embedding })
+            console.log(`[embedding] Vectorized item ${itemId} (768 dimensions)`)
+          }
+        }
+      } catch (embedErr) {
+        console.warn(`[embedding] Failed to vectorize item ${itemId}:`, embedErr.message)
       }
     } else {
       console.warn(`[ai] item ${itemId} was deleted during background processing`)
@@ -196,6 +219,25 @@ export async function updateItem(req, res) {
       updates, { new: true }
     )
     if (!item) return res.status(404).json({ error: 'Item not found' })
+
+    // If semantic text changed, refresh embedding asynchronously in background
+    const semanticFields = ['title', 'content', 'tags', 'note', 'summary']
+    if (semanticFields.some(f => req.body[f] !== undefined)) {
+      setImmediate(async () => {
+        try {
+          const text = buildItemEmbeddingText(item)
+          if (text) {
+            const embedding = await generateEmbedding(text, 'RETRIEVAL_DOCUMENT')
+            if (embedding) {
+              await Item.updateOne({ _id: item._id }, { embedding })
+            }
+          }
+        } catch (e) {
+          console.warn('[embedding] Async update failed:', e.message)
+        }
+      })
+    }
+
     return res.json({ item })
   } catch { return res.status(400).json({ error: 'Invalid update' }) }
 }

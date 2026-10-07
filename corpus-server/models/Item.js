@@ -18,6 +18,7 @@ const itemSchema = new mongoose.Schema(
     deletedAt: { type: Date, default: null },
     status: { type: String, enum: ['ready', 'pending_ai'], default: 'ready' },
     aiFailed: { type: Boolean, default: false }, // explicit failure flag, not inferred from timing
+    embedding: { type: [Number], select: false }, // 768-dim vector for Atlas Vector Search
   },
   { timestamps: true }
 )
