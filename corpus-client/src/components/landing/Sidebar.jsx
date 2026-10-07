@@ -62,7 +62,7 @@ export function FollowButton({ className = '' }) {
       >
         {/* LinkedIn */}
         <a
-          href="https://linkedin.com"
+          href="https://www.linkedin.com/in/monis-husain-dev/"
           target="_blank"
           rel="noopener noreferrer"
           title="Follow on LinkedIn"
@@ -75,7 +75,7 @@ export function FollowButton({ className = '' }) {
 
         {/* Instagram */}
         <a
-          href="https://instagram.com"
+          href="https://www.instagram.com/withcorpus/"
           target="_blank"
           rel="noopener noreferrer"
           title="Follow on Instagram"

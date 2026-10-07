@@ -146,7 +146,7 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-40 bg-ink/40 backdrop-blur-md"
+        className="fixed inset-0 z-[160] bg-ink/40 backdrop-blur-md"
         onClick={onClose}
       />
 
@@ -157,7 +157,7 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
         onClick={e => e.stopPropagation()}
-        className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-10 pointer-events-none"
+        className="fixed inset-0 z-[170] flex items-center justify-center p-6 md:p-10 pointer-events-none"
       >
         <div className="pointer-events-auto w-full max-w-5xl h-[82vh] bg-white rounded-md border border-line shadow-2xl flex overflow-hidden">
 

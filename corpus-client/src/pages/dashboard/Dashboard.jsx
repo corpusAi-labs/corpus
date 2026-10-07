@@ -1,10 +1,12 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from '../../components/dashboard/Sidebar.jsx'
 import MasonryGrid from '../../components/dashboard/MasonryGrid.jsx'
 import SaveComposer from '../../components/dashboard/SaveComposer.jsx'
 import DetailPanel from '../../components/dashboard/DetailPanel.jsx'
+import ZenSearchModal from '../../components/dashboard/ZenSearchModal.jsx'
 import NoCreditsModal from '../../components/ui/NoCreditsModal.jsx'
 import useAuthStore from '../../store/authStore.js'
 import { fetchItems, searchItems as searchItemsApi, createItem, deleteItem, uploadImage, fetchAllTags } from '../../api/items.js'
@@ -25,6 +27,14 @@ export default function Dashboard() {
   const [noCredits, setNoCredits] = useState(false)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [tagSearchQuery, setTagSearchQuery] = useState('')
+  const [isZenOpen, setIsZenOpen] = useState(false)
+  const [duplicateAlert, setDuplicateAlert] = useState(null)
+
+  useEffect(() => {
+    if (!duplicateAlert) return
+    const timer = setTimeout(() => setDuplicateAlert(null), 5000)
+    return () => clearTimeout(timer)
+  }, [duplicateAlert])
 
   // Parse view from URL search params
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search])
@@ -62,8 +72,12 @@ export default function Dashboard() {
   })
 
   const searchResultsQuery = useQuery({
-    queryKey: ['search', searchQuery, sortOption, activeType, activeTag],
-    queryFn: () => searchItemsApi(searchQuery, sortOption, { type: activeType || undefined, tag: activeTag || undefined }),
+    queryKey: ['search', searchQuery, sortOption, activeType, activeTag, isZenOpen],
+    queryFn: () => searchItemsApi(searchQuery, sortOption, {
+      type: activeType || undefined,
+      tag: activeTag || undefined,
+      mode: isZenOpen ? 'vector' : undefined,
+    }),
     enabled: !!searchQuery,
   })
 
@@ -93,6 +107,9 @@ export default function Dashboard() {
         setIsComposerOpen(false)
         setNoCredits(true)
         setCredits(0)
+      } else if (err?.response?.status === 409) {
+        const item = err?.response?.data?.item
+        setDuplicateAlert(item || true)
       }
     },
   })
@@ -186,6 +203,7 @@ export default function Dashboard() {
     { value: 'note', label: 'Notes', color: '#f74700' },
     { value: 'quote', label: 'Quotes', color: '#259d27' },
     { value: 'link', label: 'Links', color: '#0d5ddf' },
+    { value: 'image', label: 'Images', color: '#faa200' },
   ]
 
   return (
@@ -284,25 +302,52 @@ export default function Dashboard() {
             </div>
           ) : (             /* DASHBOARD VIEW */
             <div className="view-content" id="view-dashboard">
-              <div className="mb-1 h-[72px] flex items-center" data-purpose="hero-heading">
-                {isSearchFocused || searchQuery ? (
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onBlur={() => { if (!searchQuery) setIsSearchFocused(false) }}
-                    autoFocus
-                    placeholder="Search your archive..."
-                    className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-[48px] leading-tight font-roc text-black placeholder:text-gray-400 font-bold"
-                  />
-                ) : (
-                  <h1
-                    onClick={() => setIsSearchFocused(true)}
-                    className="search-heading text-[48px] leading-tight cursor-text flex flex-wrap font-roc select-none"
-                  >
-                    <span>Search</span><span> your</span><span> archive...</span>
-                  </h1>
-                )}
+              <div className="mb-1 min-h-[72px] flex items-center justify-between gap-4" data-purpose="hero-heading">
+                <div className="flex-1 flex items-center min-w-0">
+                  {isSearchFocused || searchQuery ? (
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onBlur={() => { if (!searchQuery) setIsSearchFocused(false) }}
+                      autoFocus
+                      placeholder="Search your archive..."
+                      className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-[48px] leading-tight font-roc text-black placeholder:text-gray-400 font-bold"
+                    />
+                  ) : (
+                    <h1
+                      onClick={() => setIsSearchFocused(true)}
+                      className="search-heading text-[48px] leading-tight cursor-text flex flex-wrap font-roc select-none"
+                    >
+                      <span>Search</span><span> your</span><span> archive...</span>
+                    </h1>
+                  )}
+                </div>
+
+                {/* Connected Idea Nodes Round Button with shared layout animation */}
+                <motion.button
+                  layoutId="deep-recall-portal-icon"
+                  transition={{
+                    duration: 1.15,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  onClick={() => setIsZenOpen(true)}
+                  title="Deep Recall — Connected Archive"
+                  className="relative w-[48px] h-[48px] rounded-full cursor-pointer group flex items-center justify-center select-none flex-shrink-0"
+                  data-purpose="deep-recall-btn"
+                >
+                  <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-[#EE4123] via-[#0d5ddf] to-[#27A504] opacity-35 blur-md group-hover:opacity-75 transition-opacity"></div>
+                  <div className="relative z-10 w-full h-full rounded-full bg-white border-2 border-black shadow-[3px_3px_0px_black] group-hover:shadow-none group-hover:translate-x-[2px] group-hover:translate-y-[2px] transition-all flex items-center justify-center overflow-hidden">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="transition-transform group-hover:scale-110">
+                      <path d="M6 16L12 8L18 14" stroke="#040309" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M12 8V18" stroke="#040309" strokeWidth="1.6" strokeLinecap="round" />
+                      <circle cx="6" cy="16" r="3" fill="#0d5ddf" stroke="#040309" strokeWidth="1" />
+                      <circle cx="12" cy="8" r="3.4" fill="#EE4123" stroke="#040309" strokeWidth="1" />
+                      <circle cx="18" cy="14" r="3" fill="#27A504" stroke="#040309" strokeWidth="1" />
+                      <circle cx="12" cy="18" r="2.6" fill="#E09A29" stroke="#040309" strokeWidth="1" />
+                    </svg>
+                  </div>
+                </motion.button>
               </div>
 
               <div className="border-t border-black pt-4 mb-7 flex justify-between items-center flex-wrap gap-4 relative" data-purpose="filter-bar">
@@ -431,6 +476,53 @@ export default function Dashboard() {
       )}
 
       <NoCreditsModal isOpen={noCredits} onClose={() => setNoCredits(false)} />
+
+      <ZenSearchModal
+        isOpen={isZenOpen}
+        onClose={() => setIsZenOpen(false)}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchResults={searchResultsQuery.data?.items}
+        allRecentItems={allPages}
+        isLoading={searchResultsQuery.isLoading}
+        onSelectItem={(item) => setSelectedItem(item)}
+        onDeleteItem={(id) => deleteMutation.mutate(id)}
+      />
+
+      {/* Duplicate Alert Toast */}
+      <AnimatePresence>
+        {duplicateAlert && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] bg-white border-2 border-black px-4 py-2.5 rounded-[4px] shadow-[4px_4px_0px_black] flex items-center gap-3 font-circular"
+          >
+            <span className="text-[13px] font-bold text-black">
+              Already saved in your archive!
+            </span>
+            {duplicateAlert?._id && (
+              <button
+                onClick={() => {
+                  setSelectedItem(duplicateAlert)
+                  setDuplicateAlert(null)
+                }}
+                className="px-2.5 py-1 text-[12px] font-bold bg-[#fff8f4] border border-black rounded-[4px] shadow-[1px_1px_0px_black] hover:bg-black hover:text-white transition-all ml-1 cursor-pointer"
+              >
+                View Item
+              </button>
+            )}
+            <button
+              onClick={() => setDuplicateAlert(null)}
+              className="text-gray-400 hover:text-black font-bold text-[14px] leading-none ml-2 cursor-pointer"
+              title="Close"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

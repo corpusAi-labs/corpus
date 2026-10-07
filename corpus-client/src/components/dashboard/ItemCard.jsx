@@ -94,7 +94,7 @@ export default function ItemCard({ item: initialItem, onClick, onDelete }) {
   return (
     <div
       onPointerMove={handlePointerMove}
-      onClick={() => onClick(item)}
+      onClick={() => onClick?.(item)}
       className={`memory-card relative overflow-hidden rounded-[9px] bg-white p-5 min-h-[160px] h-full border-2 transition-all duration-200 cursor-pointer group select-none flex flex-col justify-between ${
         isPending
           ? 'animate-border-flash'

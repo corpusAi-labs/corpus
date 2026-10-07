@@ -31,32 +31,45 @@
   transform: translateY(108%);
 }
 
-/* Default (Leave) Delays - Reversed Order (70ms stagger) */
-.side-nav-card .wave-layer-0 svg { transition-delay: 210ms; }
-.side-nav-card .wave-layer-1 svg { transition-delay: 140ms; }
-.side-nav-card .wave-layer-2 svg { transition-delay: 70ms; }
-.side-nav-card .wave-layer-3 svg { transition-delay: 0ms; }
+/* Side Nav & Wave Button Delays - Reversed Order (70ms stagger) */
+.side-nav-card .wave-layer-0 svg,
+.wave-btn .wave-layer-0 svg { transition-delay: 210ms; }
+.side-nav-card .wave-layer-1 svg,
+.wave-btn .wave-layer-1 svg { transition-delay: 140ms; }
+.side-nav-card .wave-layer-2 svg,
+.wave-btn .wave-layer-2 svg { transition-delay: 70ms; }
+.side-nav-card .wave-layer-3 svg,
+.wave-btn .wave-layer-3 svg { transition-delay: 0ms; }
 
 /* Hover Delays - Forward Order (120ms stagger) */
-.side-nav-card:hover .wave-layer-0 svg { transform: translateY(0%); transition-delay: 0ms; }
-.side-nav-card:hover .wave-layer-1 svg { transform: translateY(0%); transition-delay: 120ms; }
-.side-nav-card:hover .wave-layer-2 svg { transform: translateY(0%); transition-delay: 240ms; }
-.side-nav-card:hover .wave-layer-3 svg { transform: translateY(0%); transition-delay: 360ms; }
+.side-nav-card:hover .wave-layer-0 svg,
+.wave-btn:hover .wave-layer-0 svg { transform: translateY(0%); transition-delay: 0ms; }
+.side-nav-card:hover .wave-layer-1 svg,
+.wave-btn:hover .wave-layer-1 svg { transform: translateY(0%); transition-delay: 120ms; }
+.side-nav-card:hover .wave-layer-2 svg,
+.wave-btn:hover .wave-layer-2 svg { transform: translateY(0%); transition-delay: 240ms; }
+.side-nav-card:hover .wave-layer-3 svg,
+.wave-btn:hover .wave-layer-3 svg { transform: translateY(0%); transition-delay: 360ms; }
 
 /* Transition text and icon colors on hover */
-.side-nav-card .nav-content {
+.side-nav-card .nav-content,
+.wave-btn .wave-content {
   transition: color 0.4s ease;
 }
 .side-nav-card:hover .nav-content,
-.side-nav-card[data-active="true"] .nav-content {
+.side-nav-card[data-active="true"] .nav-content,
+.wave-btn:hover .wave-content {
   color: black !important;
 }
-.side-nav-card .nav-icon {
-  transition: stroke 0.4s ease;
+.side-nav-card .nav-icon,
+.wave-btn .wave-icon {
+  transition: stroke 0.4s ease, color 0.4s ease;
 }
 .side-nav-card:hover .nav-icon,
-.side-nav-card[data-active="true"] .nav-icon {
+.side-nav-card[data-active="true"] .nav-icon,
+.wave-btn:hover .wave-icon {
   stroke: black !important;
+  color: black !important;
 }
 
 /* Sidebar Background Transition */
