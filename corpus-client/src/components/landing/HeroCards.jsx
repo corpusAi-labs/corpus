@@ -65,8 +65,25 @@ export default function HeroCards() {
   return (
     /* z-20 — cards float above the z-10 hero text */
     <div className="absolute inset-0 z-20 pointer-events-none" ref={containerRef}>
-      <div id="card-green"  className="card bg-[#259d27]" />
-      <div id="card-blue"   className="card bg-[#0d5ddf]" />
+      <div 
+        id="card-green" 
+        className="card"
+        style={{
+          backgroundColor: '#258b30',
+          backgroundImage: 'url(/images/pricing-1.jpg)',
+          backgroundBlendMode: 'multiply',
+          backgroundSize: 'cover',
+        }}
+      />
+      <div 
+        id="card-blue" 
+        className="card"
+        style={{
+          backgroundColor: '#1d52d8',
+          backgroundImage: 'url(/images/pricing-3.jpg)',
+          backgroundSize: 'cover',
+        }}
+      />
       <div id="card-purple" className="card bg-[#9439f9]" />
       <div id="card-cat"    className="card bg-white">
         <img
@@ -75,8 +92,25 @@ export default function HeroCards() {
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuALxOxWAxCl3BQ-ItRhEj5LSZiF5ESjdWpHZIuPQ2UuIvkekUP4suU--UsLPybMB8zwz2rJdjWtlAJ3PqrtxFPChCLJ1OuK8c6yQJfC8QdZoNXN9WjGlQjNkDzPlJMoq6m8-D9fJn0s_QDbog-IXhd70R7t4tkYZSq5NKk1_SIWHM0KRZU0AmfGDw7WyBRLVngOVZKTnxSdBH_LgSIgJAgEYmfTLdJGkjJMN3nzeDyIisNtHKEghNYBMaYvIqOEfNqsxvQ"
         />
       </div>
-      <div id="card-orange" className="card bg-[#f74700]" />
-      <div id="card-yellow" className="card bg-[#faa200]" />
+      <div 
+        id="card-orange" 
+        className="card"
+        style={{
+          backgroundColor: '#ea5834',
+          backgroundImage: 'url(/images/pricing-2.jpg)',
+          backgroundSize: 'cover',
+        }}
+      />
+      <div 
+        id="card-yellow" 
+        className="card"
+        style={{
+          backgroundColor: '#faa200',
+          backgroundImage: 'url(/images/pricing-1.jpg)',
+          backgroundBlendMode: 'multiply',
+          backgroundSize: 'cover',
+        }}
+      />
     </div>
   );
 }
