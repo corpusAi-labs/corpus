@@ -2,14 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-display: swap;
+  font-family: 'F37 Analog';
+  font-style: normal;
+  font-weight: 500;
+  src: url('/fonts/F37Analog-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Graphik Web';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/Graphik-Regular-Web.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Graphik Web';
+  font-style: normal;
+  font-weight: 500;
+  src: url('/fonts/Graphik-Medium-Web.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Architect Pro';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/ArchitectProMarkerCap.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Architect Pro Symbols';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/ArchitectProSymbols.woff2') format('woff2');
+}
+
 @layer base {
   html { scroll-behavior: smooth; }
   body {
-    background-color: #f0e3d9;
-    font-family: 'Circular Std', 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #eadfc9;
+    font-family: 'Graphik Web', 'Circular Std', 'Inter', system-ui, -apple-system, sans-serif;
     @apply text-ink antialiased;
   }
   ::selection { @apply bg-accent/20; }
+}
+
+/* Illoca Cardboard and Paper Design System */
+.bg-grid-cardboard {
+  background-attachment: fixed;
+  background-color: #eadfc9;
+  background-image: linear-gradient(90deg, #d3c9b5 1px, transparent 0), linear-gradient(#e3d9c3 1px, transparent 0);
+  background-position: 0 0;
+  background-size: 1rem 1rem;
+}
+
+.text-stroke-1 {
+  -webkit-text-stroke: 1px currentColor;
+}
+.text-stroke-black {
+  -webkit-text-stroke-color: #000;
+}
+.text-stroke-cardboard {
+  -webkit-text-stroke-color: #eadfc9;
+}
+.text-stroke-light {
+  -webkit-text-stroke-color: #eadfc9;
+}
+
+.button-paper {
+  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.15);
+}
+
+.paper {
+  background-image: url(/images/pricing-1.jpg);
+  border: 1px solid rgba(66, 66, 66, 0.3);
+  box-shadow: 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.content-pricing {
+  background-image: url(/images/pricing.jpg);
+  background-repeat: repeat;
+}
+
+.content-faqs {
+  background-image: url(/images/faqs.jpg);
+  background-repeat: repeat;
+  box-shadow: 6px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tab-shadow {
+  filter: drop-shadow(6px 6px 0 rgba(0, 0, 0, 0.1));
+}
+
+.pricing-card {
+  background-repeat: repeat;
+  box-shadow: 4px 4px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem 1.5rem 1.75rem;
+}
+@media (min-width: 1080px) {
+  .pricing-card {
+    padding: 2rem 2rem 2rem;
+  }
+}
+
+.card--white {
+  background-image: url(/images/pricing-1.jpg);
+}
+
+.card--red {
+  background-image: url(/images/pricing-2.jpg);
+}
+@media (min-width: 1080px) {
+  .card--red {
+    padding: 2.75rem 2rem 2.5rem;
+  }
+}
+
+.card--blue {
+  background-image: url(/images/pricing-3.jpg);
+}
+
+.pricing-list li {
+  border-bottom: 1px dashed #a7a7a7;
+  padding: 0.35rem 0 0.35rem 1.4rem;
+  position: relative;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+.pricing-list li::before {
+  background-image: url(/images/tick.png);
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: "";
+  display: inline-block;
+  height: 0.85rem;
+  left: 0;
+  margin-right: 0.25rem;
+  position: absolute;
+  top: 0.42rem;
+  width: 0.85rem;
+}
+
+.pricing-list--light li {
+  border-bottom: 1px dashed rgba(234, 223, 201, 0.4);
+}
+.pricing-list--light li::before {
+  background-image: url(/images/tick-light.png);
+}
+
+.emph {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #ec633d;
+  text-underline-offset: 4px;
+}
+
+.accordion-button-illoca {
+  align-items: center;
+  aspect-ratio: 16/15;
+  background: #e5d6bc;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 2rem;
+  border-radius: 2px;
 }
 
 /* Background grid overlay */
@@ -397,32 +559,7 @@ aside[data-view-active="dashboard"] { background-color: #f0e3d9 !important; }
   border-bottom: none;
 }
 
-/* Stacking Cards */
-.sticky-card {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 2rem;
-  height: 80vh;
-  width: 100%;
-  border: 2px solid black;
-  border-radius: 48px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-   
-  padding: 4rem;
-  will-change: transform;
-}
-.sticky-cards-container {
-  position: relative;
-  height: 80vh;
-  width: 100%;
-  max-width: 1280px;
-  padding: 4rem; 
-  bottom: 1rem;
-  
-}
+/* Stacking Cards - styled directly in StackingCards.jsx */
 
 /* Grid animated bg for pricing */
 .grid-bg-animated {
@@ -510,15 +647,25 @@ aside[data-view-active="dashboard"] { background-color: #f0e3d9 !important; }
 
 /* Process cards */
 .process-card {
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease;
 }
 .process-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 12px 12px 0px 0px rgba(0,0,0,1);
+  /* No pop up / lift off the page */
+  transform: none;
+}
+.process-card .process-drop-box {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  box-shadow: inset 1px 2px 4px rgba(0, 0, 0, 0.07);
+}
+.process-card:hover .process-drop-box {
+  /* Inside card effect: debossed inset shadow */
+  transform: none;
+  border-color: rgba(66, 66, 66, 0.55);
+  box-shadow: inset 2px 4px 10px rgba(0, 0, 0, 0.18), inset -1px -1px 3px rgba(255, 255, 255, 0.5);
 }
 .process-card:hover .roman-numeral-bg {
   opacity: 1;
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.05);
 }
 
 /* Sidebar Layout */
