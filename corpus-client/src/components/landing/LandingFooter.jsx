@@ -7,7 +7,7 @@ export default function LandingFooter() {
     const gridContainer = gridContainerRef.current;
     if (!gridContainer) return;
 
-    const colors = ['#0d5ddf', '#9439f9', '#f74700', '#259d27', '#faa200'];
+    const colors = ['#1d52d8', '#9439f9', '#ea5834', '#258b30', '#faa200'];
     let isPainting = false;
 
     function paintCell(cell) {
