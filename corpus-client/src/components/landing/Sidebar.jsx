@@ -7,30 +7,36 @@ const NAV_CARDS = [
   {
     num: '01',
     label: 'Home',
-    bg: 'bg-[#0d5ddf]',
+    bg: 'bg-[#1d52d8]',
+    bgImg: '/images/pricing-3.jpg',
     href: '#',
-    waves: ['#faa200', '#9439f9', '#f74700', '#0d5ddf'],
+    waves: ['#faa200', '#9439f9', '#ea5834', '#1d52d8'],
   },
   {
     num: '01',
     label: 'Features',
     bg: 'bg-[#faa200]',
+    bgImg: '/images/pricing-1.jpg',
+    blendMode: 'multiply',
     href: '#stack-section-trigger',
-    waves: ['#0d5ddf', '#9439f9', '#f74700', '#faa200'],
+    waves: ['#1d52d8', '#9439f9', '#ea5834', '#faa200'],
   },
   {
     num: '02',
     label: 'Pricing',
-    bg: 'bg-[#f74700]',
+    bg: 'bg-[#ea5834]',
+    bgImg: '/images/pricing-2.jpg',
     href: '#pricing-section',
-    waves: ['#0d5ddf', '#9439f9', '#faa200', '#f74700'],
+    waves: ['#1d52d8', '#9439f9', '#faa200', '#ea5834'],
   },
   {
     num: '03',
     label: 'How it works',
-    bg: 'bg-[#259d27]',
+    bg: 'bg-[#258b30]',
+    bgImg: '/images/pricing-1.jpg',
+    blendMode: 'multiply',
     href: '#how-it-works',
-    waves: ['#faa200', '#9439f9', '#f74700', '#259d27'],
+    waves: ['#faa200', '#9439f9', '#ea5834', '#258b30'],
   },
 ];
 
@@ -127,8 +133,16 @@ export default function Sidebar() {
               onClick={() => setIsOpen(false)}
               className="side-nav-card relative overflow-hidden rounded-xl w-full flex-1 min-h-[68px] block no-underline group select-none cursor-pointer"
             >
-              {/* Base background color */}
-              <div className={`absolute inset-0 ${card.bg}`} />
+              {/* Base background color & tactile paper texture */}
+              <div 
+                className={`absolute inset-0 ${card.bg}`}
+                style={{
+                  backgroundImage: `url(${card.bgImg})`,
+                  backgroundSize: 'cover',
+                  backgroundRepeat: 'repeat',
+                  ...(card.blendMode ? { backgroundBlendMode: card.blendMode } : {}),
+                }}
+              />
 
               {/* Hover Waves */}
               {card.waves.map((waveColor, wIdx) => (
@@ -194,7 +208,7 @@ export default function Sidebar() {
               onClick={() => setIsOpen(false)}
               className="relative overflow-hidden group bg-black text-white rounded-xl text-[11px] font-bold cursor-pointer no-underline uppercase font-hanken flex items-center justify-center h-10 w-full shrink-0 select-none"
             >
-              <div className="absolute inset-0 bg-[#f74700] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
+              <div className="absolute inset-0 bg-[#ea5834] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
               <span className="relative z-10 font-black tracking-wider transition-transform duration-300 group-hover:scale-105">
                 Dashboard
               </span>
@@ -205,7 +219,7 @@ export default function Sidebar() {
               onClick={() => setIsOpen(false)}
               className="relative overflow-hidden group bg-black text-white rounded-xl text-[11px] font-bold cursor-pointer no-underline uppercase font-hanken flex items-center justify-center h-10 w-full shrink-0 select-none"
             >
-              <div className="absolute inset-0 bg-[#f74700] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
+              <div className="absolute inset-0 bg-[#ea5834] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
               <span className="relative z-10 font-black tracking-wider transition-transform duration-300 group-hover:scale-105">
                 Sign in
               </span>

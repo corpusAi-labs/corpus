@@ -15,7 +15,7 @@ export default function HeroSection() {
             id="hero-text"
           >
             <h1
-              className="text-[#f74700] text-[2.8rem] sm:text-[3.5rem] md:text-[4.2rem] lg:text-[4.6rem] leading-[1.05] font-black tracking-tight font-hanken"
+              className="text-[#ea5834] text-[2.8rem] sm:text-[3.5rem] md:text-[4.2rem] lg:text-[4.6rem] leading-[1.05] font-black tracking-tight font-hanken"
               id="hero-title"
             >
               Remember everything <br />
@@ -33,15 +33,15 @@ export default function HeroSection() {
               <span className="px-4 py-1.5 rounded-full border border-black bg-[#9439f9]/10 text-[#9439f9] font-bold text-sm">
                 bookmarks
               </span>
-              <span className="px-4 py-1.5 rounded-full border border-black bg-[#0d5ddf]/10 text-[#0d5ddf] font-bold text-sm">
+              <span className="px-4 py-1.5 rounded-full border border-black bg-[#1d52d8]/10 text-[#1d52d8] font-bold text-sm">
                 inspiration
               </span>
               <div className="w-full flex flex-wrap justify-center items-center gap-x-2 gap-y-2">
-                <span className="px-4 py-1.5 rounded-full border border-black bg-[#f74700]/10 text-[#f74700] font-bold text-sm">
+                <span className="px-4 py-1.5 rounded-full border border-black bg-[#ea5834]/10 text-[#ea5834] font-bold text-sm">
                   articles
                 </span>
                 <span className="opacity-70">and</span>
-                <span className="px-4 py-1.5 rounded-full border border-black bg-[#259d27]/10 text-[#259d27] font-bold text-sm">
+                <span className="px-4 py-1.5 rounded-full border border-black bg-[#258b30]/10 text-[#258b30] font-bold text-sm">
                   images
                 </span>
                 <span className="opacity-70">in one single, private place.</span>
