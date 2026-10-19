@@ -43,7 +43,7 @@ export default function BentoGallery() {
           <div className="flex-shrink-0 w-[450px]">
             <h2 className="text-black text-7xl font-black uppercase leading-[0.9] tracking-tighter font-hanken">
               Your curated<br />
-              <span className="text-[#f74700]">vault.</span>
+              <span className="text-[#ea5834]">vault.</span>
             </h2>
             <p className="text-black/60 mt-8 text-xl max-w-sm leading-relaxed font-dm-sans">
               Your second memory for links, notes, and research. Save in two seconds—AI handles the rest.
@@ -52,8 +52,15 @@ export default function BentoGallery() {
 
           <div className="bento-container">
             
-            {/* 1. LARGE ORANGE CARD */}
-            <div className="bento-panel bento-panel-large bg-[#f74700] p-9 lg:p-10 flex flex-col justify-end text-white">
+            {/* 1. LARGE TERRACOTTA RED CARD */}
+            <div 
+              className="bento-panel bento-panel-large bg-[#ea5834] p-9 lg:p-10 flex flex-col justify-end text-white"
+              style={{
+                backgroundImage: 'url(/images/pricing-2.jpg)',
+                backgroundSize: 'cover',
+                backgroundRepeat: 'repeat',
+              }}
+            >
               <div className="absolute top-8 left-8 lg:top-10 lg:left-10">
                 <span className="px-3.5 py-1.5 border border-white/30 rounded-full text-[11px] font-bold uppercase tracking-widest font-hanken">
                  ORGANIZATION ON AUTOPILOT
@@ -78,11 +85,20 @@ export default function BentoGallery() {
                   alt="Archive Visual"
                   className="w-full h-full object-cover"
                   src={bento1}
+                  onLoad={() => ScrollTrigger.refresh()}
                 />
               </div>
 
-              {/* BOTTOM: Yellow Card */}
-              <div className="h-[35%] bento-panel bg-[#EAB308] flex items-center justify-center p-6 text-black shrink-0">
+              {/* BOTTOM: Yellow Card with tactile paper texture */}
+              <div 
+                className="h-[35%] bento-panel bg-[#faa200] flex items-center justify-center p-6 text-black shrink-0"
+                style={{
+                  backgroundImage: 'url(/images/pricing-1.jpg)',
+                  backgroundBlendMode: 'multiply',
+                  backgroundSize: 'cover',
+                  backgroundRepeat: 'repeat',
+                }}
+              >
                 <div className="text-center">
                   <h4 className="text-2xl font-black italic font-hanken uppercase tracking-tight">DRIFT MODE</h4>
                   <p className="text-xs font-bold uppercase tracking-widest opacity-90 font-hanken mt-1">
@@ -99,6 +115,7 @@ export default function BentoGallery() {
                 alt="Textures"
                 className="w-full h-full object-cover"
                 src={bento2}
+                onLoad={() => ScrollTrigger.refresh()}
               />
             </div>
 
@@ -115,8 +132,16 @@ export default function BentoGallery() {
                 <div className="bento-list-item text-lg mt-2">Custom names and colors to keep ideas visually distinct</div>
               </div>
 
-              {/* BOTTOM: Green Card */}
-              <div className="h-[35%] bento-panel bg-[#259d27] flex items-center justify-center p-8 shrink-0">
+              {/* BOTTOM: Green Card with tactile paper texture */}
+              <div 
+                className="h-[35%] bento-panel bg-[#258b30] flex items-center justify-center p-8 shrink-0"
+                style={{
+                  backgroundImage: 'url(/images/pricing-1.jpg)',
+                  backgroundBlendMode: 'multiply',
+                  backgroundSize: 'cover',
+                  backgroundRepeat: 'repeat',
+                }}
+              >
                 <div className="text-white text-center">
                   <div className="text-5xl font-black italic font-hanken">100</div>
                   <div className="text-[12px] font-bold uppercase tracking-widest opacity-80 font-hanken">
