@@ -11,7 +11,13 @@ const CARDS_DATA = [
     badge: 'Efficiency',
     title: 'Frictionless Capture',
     desc: 'Collect data continuously via browser extensions, text messaging, or quick native desktop drops.',
-    bg: '#0d5ddf',
+    bgImg: '/images/pricing-1.jpg',
+    bgColor: '#fdfbf7',
+    textColor: 'text-black',
+    subColor: 'text-black/75',
+    numberColor: 'text-black/25',
+    pillBorder: 'border border-[#424242]/30 text-black/85 bg-black/[0.03]',
+    cardBorder: 'border border-[#424242]/20',
   },
   {
     id: 'sc-2',
@@ -19,15 +25,27 @@ const CARDS_DATA = [
     badge: 'Philosophy',
     title: 'Zero Folder Architecture',
     desc: 'Eliminate cognitive fatigue caused by complex tagging systems.',
-    bg: '#f74700',
+    bgImg: '/images/pricing-2.jpg',
+    bgColor: '#ea5834',
+    textColor: 'text-white',
+    subColor: 'text-white/90',
+    numberColor: 'text-white/30',
+    pillBorder: 'border border-white/40 text-white/95 bg-white/[0.08]',
+    cardBorder: 'border border-[#424242]/30',
   },
   {
     id: 'sc-3',
     num: '03',
     badge: 'Omnichannel',
     title: 'Cross-Interface Ingestion',
-    desc: 'Collect data continuously via browser extensions, text messaging, or quick native desktop drops.',
-    bg: '#259d27',
+    desc: 'Connect your entire workflow seamlessly across browser extensions, native drops, and mobile apps.',
+    bgImg: '/images/pricing-3.jpg',
+    bgColor: '#1d52d8',
+    textColor: 'text-white',
+    subColor: 'text-white/90',
+    numberColor: 'text-white/30',
+    pillBorder: 'border border-white/40 text-white/95 bg-white/[0.08]',
+    cardBorder: 'border border-[#424242]/25',
   },
   {
     id: 'sc-4',
@@ -35,198 +53,120 @@ const CARDS_DATA = [
     badge: 'Context',
     title: 'Auto-Generated Bookmarks',
     desc: 'Product URLs are enriched with live merchant pricing, product imagery, and store metadata automatically.',
-    bg: '#faa200',
+    bgImg: '/images/pricing.jpg',
+    bgColor: '#eadfc9',
+    textColor: 'text-black',
+    subColor: 'text-black/75',
+    numberColor: 'text-black/25',
+    pillBorder: 'border border-[#424242]/30 text-black/85 bg-black/[0.03]',
+    cardBorder: 'border border-[#424242]/20',
   },
 ];
-
-// Card height — leaves a small gap at the bottom so rounded corners show
-const CARD_H = 'calc(100vh - 48px)';
 
 export default function StackingCards() {
   useEffect(() => {
     const stackingCards = gsap.utils.toArray('.sticky-card');
     if (stackingCards.length === 0) return;
 
-    const offset = 25;
+    const offset = 22;
 
-    // Card 1 starts visible, rest stacked 110vh below
-    gsap.set(stackingCards[0], { y: 0 });
-    gsap.set(stackingCards.slice(1), { y: '110vh' });
+    const ctx = gsap.context(() => {
+      // Card 1 starts visible, rest stacked below
+      gsap.set(stackingCards[0], { y: 0 });
+      gsap.set(stackingCards.slice(1), { y: '110vh' });
 
-    const stackTl = gsap.timeline({
-      scrollTrigger: {
-        trigger: '#stack-section-trigger',
-        start: 'top top',
-        end: `+=${stackingCards.length * 110}vh`,
-        pin: true,
-        scrub: 0.6,
-        anticipatePin: 1,
-      },
+      const stackTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: '#stack-section-trigger',
+          start: 'top top',
+          end: `+=${stackingCards.length * 100}vh`,
+          pin: true,
+          scrub: 0.6,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      stackingCards.forEach((card, i) => {
+        if (i > 0) {
+          stackTl.to(
+            card,
+            { y: i * offset, ease: 'none', duration: 2 },
+            (i - 1) * 2
+          );
+        }
+      });
     });
 
-    stackingCards.forEach((card, i) => {
-      if (i > 0) {
-        stackTl.to(
-          card,
-          { y: i * offset, ease: 'none', duration: 2 },
-          (i - 1) * 2
-        );
-      }
-    });
+    ScrollTrigger.sort();
+    ScrollTrigger.refresh();
 
     return () => {
-      stackTl.scrollTrigger?.kill();
-      stackTl.kill();
+      ctx.revert();
     };
   }, []);
 
   return (
-    /*
-     * z-30 — below the pricing section (z-50) so when the pin
-     * releases, pricing cleanly slides over the top of this section.
-     * Solid background prevents see-through during the pin.
-     */
     <section
-       className="bg-[#fff8f4] relative z-40"
+      className="relative z-30 w-full bg-[#eadfc9]"
       id="stack-section-trigger"
-      //style={{ position: 'relative',  background: '#fff8f4' , zIndex: 30 }}
     >
-      {/* The pinned wrapper must be exactly 100vh so GSAP can pin it */}
+      {/* Pinned 100vh viewport */}
       <div
-         className="w-full h-screen flex flex-col items-center justify-start pt-10 px-5 lg:px-20"
+        className="w-full h-screen min-h-[640px] flex flex-col items-center justify-start pt-5 sm:pt-7 pb-8 sm:pb-12 px-4 sm:px-8 lg:px-16 box-border overflow-visible"
         id="stack-viewport"
-        // style={{
-        //   width: '100%',
-        //   height: '100vh',
-        //   display: 'flex',
-        //   flexDirection: 'column',
-        //   alignItems: 'center',
-        //   justifyContent: 'flex-start',
-        //   padding: '25px 80px 0',
-        //   boxSizing: 'border-box',
-        //   overflow: 'hidden',
-        // }}
       >
-        {/* Section header */}
-        <div style={{ width: '100%', textAlign: 'center', marginBottom: '30px', flexShrink: 0 }}>
-          <h2
-            style={{
-              fontFamily: 'Hanken Grotesk, sans-serif',
-              fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '-0.04em',
-              lineHeight: 0.88,
-              marginBottom: '10px',
-            }}
-          >
+        {/* Section Header */}
+        <div className="w-full text-center mb-3 sm:mb-5 flex-shrink-0">
+          <h2 className="font-hanken text-3xl sm:text-5xl lg:text-6xl font-900 uppercase tracking-tight leading-[0.9] mb-1.5 text-black">
             Built for the <br />
-            <span style={{ color: '#0d5ddf' }}>Modern Mind.</span>
+            <span className="text-[#1d52d8]">Modern Mind.</span>
           </h2>
-          <p style={{ color: 'rgba(0,0,0,0.55)', fontSize: '1.1rem', fontWeight: 500, fontFamily: 'DM Sans, sans-serif' }}>
+          <p className="font-graphik text-xs sm:text-sm text-black/60 font-medium">
             Uncompromising tools for your digital evolution.
           </p>
         </div>
 
-        {/*
-         * Card stack.
-         * Height: fills the remaining viewport space minus the header (~160px).
-         * Each card is absolutely stacked, GSAP animates y to slide them in.
-         */}
+        {/* Card stack container — sized so translated cards never clip at bottom */}
         <div
-          className="sticky-cards-container"
-          style={{
-            paddingTop: '2rem',
-            paddingBottom: '20rem',
-            position: 'relative',
-            width: '100%',
-            maxWidth: '1280px',
-            flex: 1,           // fill remaining height
-            overflow: 'visible',
-          
-          }}
+          className="sticky-cards-container relative w-full max-w-[1240px] flex-1 max-h-[540px] overflow-visible"
         >
           {CARDS_DATA.map((card) => (
             <div
               key={card.id}
               id={card.id}
-              className="sticky-card"
+              className={`sticky-card absolute inset-x-0 top-0 w-full h-[430px] sm:h-[470px] lg:h-[510px] max-h-[calc(100vh-230px)] rounded-[24px] sm:rounded-[36px] ${card.cardBorder} overflow-hidden p-6 sm:p-10 lg:p-12 will-change-transform flex flex-col justify-start`}
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',   // fills the flex-1 container → nearly full viewport
-                backgroundColor: card.bg,
-                border: '3px solid black',
-                borderRadius: '40px',
-                overflow: 'hidden',
-                willChange: 'transform',
-                display: 'grid',
-                gridTemplateRows: 'auto 1fr',   // row 1: number+badge  row 2: title+desc
-                padding: '2.5rem 3rem',
-                boxSizing: 'border-box',
-                color: 'white',
+                backgroundColor: card.bgColor,
+                backgroundImage: `url(${card.bgImg})`,
+                backgroundRepeat: 'repeat',
+                backgroundSize: 'cover',
+                boxShadow: '6px 6px 0px rgba(0, 0, 0, 0.12)',
               }}
             >
-              {/* Row 1 — ghost number + badge pill */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              {/* Row 1 — Large watermark number + badge pill */}
+              <div className="flex justify-between items-start z-10 w-full">
                 <span
-                  style={{
-                    fontFamily: 'Hanken Grotesk, sans-serif',
-                    fontSize: 'clamp(4rem, 10vw, 8rem)',
-                    fontWeight: 900,
-                    opacity: 0.18,
-                    lineHeight: 1,
-                  }}
+                  className={`font-hanken text-5xl sm:text-6xl lg:text-7xl font-900 leading-none select-none ${card.numberColor}`}
+                  style={{ lineHeight: 1 }}
                 >
                   {card.num}
                 </span>
                 <span
-                  style={{
-                    padding: '6px 20px',
-                    border: '2px solid rgba(255,255,255,0.4)',
-                    borderRadius: '999px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    fontFamily: 'Hanken Grotesk, sans-serif',
-                  }}
+                  className={`px-4 sm:px-5 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider font-hanken ${card.pillBorder} backdrop-blur-xs`}
                 >
                   {card.badge}
                 </span>
               </div>
 
-              {/* Row 2 — title + description, vertically centred in remaining space */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',   // vertical centre of the remaining row
-                }}
-              >
+              {/* Row 2 — Title + Description with decreased top space gap & ample bottom padding */}
+              <div className="flex flex-col justify-start z-10 max-w-4xl mt-3 sm:mt-5 lg:mt-6 pb-6 sm:pb-10">
                 <h3
-                  style={{
-                    fontFamily: 'Hanken Grotesk, sans-serif',
-                    fontSize: 'clamp(2rem, 5vw, 5rem)',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    lineHeight: 0.95,
-                    marginBottom: '1.25rem',
-                  }}
+                  className={`font-hanken text-3xl sm:text-5xl lg:text-6xl xl:text-7xl font-900 uppercase leading-[0.92] mb-3 sm:mb-4 tracking-tight ${card.textColor}`}
                 >
                   {card.title}
                 </h3>
                 <p
-                  style={{
-                    fontFamily: 'DM Sans, sans-serif',
-                    fontSize: 'clamp(1rem, 1.5vw, 1.25rem)',
-                    opacity: 0.9,
-                    lineHeight: 1.6,
-                    maxWidth: '36rem',
-                    fontWeight: 500,
-                  }}
+                  className={`font-graphik text-base sm:text-xl lg:text-2xl font-medium leading-relaxed max-w-3xl ${card.subColor}`}
                 >
                   {card.desc}
                 </p>
