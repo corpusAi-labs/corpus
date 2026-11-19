@@ -132,9 +132,9 @@ export default function LandingFooter() {
             </a>
             <a
               className="px-5 py-2 border-2 border-black rounded-full font-bold text-xs transition-all duration-200 hover:bg-black hover:text-white bg-white/50 no-underline text-black"
-              href="#"
+              href="/security"
             >
-              Privacy Policy
+              Security
             </a>
           </div>
         </div>

@@ -3,6 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { updateItem, deleteItem, retryItemAI } from '../../api/items.js'
 import api from '../../api/axios.js'
 import SpacePicker from '../spaces/SpacePicker.jsx'
+import PdfViewer, { shortTldr } from './PdfViewer.jsx'
+
+const PDF_STAGE = {
+  queued: 'waiting to read',
+  extracting: 'reading pages',
+  indexing: 'indexing every page',
+  summarizing: 'summarising',
+}
+const formatSize = b => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
 
 function cleanTextContent(raw) {
   if (!raw) return ''
@@ -49,15 +58,18 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
   // or aiFailed is true — no more guessing based on elapsed time.
   useEffect(() => {
     if (!item || item.status !== 'pending_ai') {
-      setShowRetry(!!item?.aiFailed && !item?.summary)
+      setShowRetry(!!item?.aiFailed && !item?.summary && !item?.aiOptOut)
       return
     }
     setShowRetry(false)
     pollRef.current = setInterval(async () => {
       try {
         const { data } = await api.get(`/items/${item._id}`)
+        if (data.item.type === 'pdf' && data.item.status === 'pending_ai') {
+          setItem(prev => ({ ...data.item, match: prev.match })) // live progress
+        }
         if (data.item.status !== 'pending_ai') {
-          setItem(data.item)
+          setItem(prev => ({ ...data.item, match: prev.match }))
           setTags(data.item.tags || [])
           onUpdate?.()
           setShowRetry(!!data.item.aiFailed && !data.item.summary)
@@ -125,6 +137,16 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
     try { await updateItem(item._id, { spaceId: newSpaceId }); onUpdate?.() } catch {}
   }
 
+  async function handleToggleAI() {
+    const next = !item.aiOptOut
+    if (next && !confirm('Keep this item away from AI? Its summary stays, but its search vectors are deleted and it will never be sent to an AI provider again.')) return
+    try {
+      const { item: updated } = await updateItem(item._id, { aiOptOut: next })
+      setItem(prev => ({ ...prev, ...updated }))
+      onUpdate?.()
+    } catch {}
+  }
+
   async function handleDelete() {
     if (!confirm('Remove this item?')) return
     try { await deleteItem(item._id); onDelete(item._id); onClose() } catch {}
@@ -136,6 +158,7 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
   const isLink = item.type === 'link'
   const isImage = item.type === 'image'
   const isText = item.type === 'note' || item.type === 'quote'
+  const isPdf = item.type === 'pdf'
   const aiLoading = item.status === 'pending_ai'
 
   return (
@@ -175,6 +198,16 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
             </div>
 
             {/* content area */}
+            {isPdf ? (
+              <div className="flex-1 min-h-0 flex flex-col">
+                {item.title && (
+                  <div className="px-6 pt-4 pb-3 bg-[#F5F4EF]">
+                    <h2 className="font-serif text-[20px] leading-snug text-ink">{item.title}</h2>
+                  </div>
+                )}
+                <div className="flex-1 min-h-0"><PdfViewer item={item} /></div>
+              </div>
+            ) : (
             <div className="flex-1 overflow-y-auto">
               {(() => {
                 const displayThumbnail = (isLink || isImage) && item.thumbnailUrl
@@ -226,6 +259,7 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
                 </div>
               )}
             </div>
+            )}
 
             {/* visit button */}
             {isLink && item.url && (
@@ -271,7 +305,7 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
                         ))}
                       </div>
                       <span className="font-mono text-[10px] text-accent/70 uppercase tracking-wider">
-                        creating memory
+                        {isPdf ? `${PDF_STAGE[item.processing?.stage] || 'processing'} · ${item.processing?.progress || 0}%` : 'creating memory'}
                       </span>
                     </div>
                     {/* skeleton lines */}
@@ -291,10 +325,11 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
                     animate={{ opacity: 1, y: 0 }}
                     className="text-[13.5px] leading-relaxed text-ink"
                   >
-                    {item.summary}
+                    {(isPdf ? shortTldr(item) : item.summary) || (item.aiOptOut ? 'AI is off for this item — no summary is generated.' : '')}
                   </motion.p>
                 )}
               </div>
+
 
               {/* MIND TAGS */}
               <div>
@@ -375,6 +410,32 @@ export default function DetailPanel({ item: initialItem, onClose, onDelete, onUp
               <div className="text-[11px] text-muted font-mono space-y-1 pt-2 border-t border-line">
                 <p>{new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                 {domain && <p>{domain}</p>}
+                {isPdf && item.file && (
+                  <p>
+                    {item.file.pageCount} pages · {formatSize(item.file.sizeBytes)}
+                    {item.file.pagesIndexed < item.file.pageCount && ` · first ${item.file.pagesIndexed} searchable`}
+                  </p>
+                )}
+                {item.docType && item.docType !== 'other' && <p>type: {item.docType.replace(/-/g, ' ')}</p>}
+              </div>
+
+              {/* AI PRIVACY SWITCH */}
+              <div className="flex items-start justify-between gap-3 pt-3 border-t border-line">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-muted">AI processing</p>
+                  <p className="text-[11.5px] text-muted leading-snug mt-1">
+                    {item.aiOptOut ? 'Off — never sent to an AI provider.' : 'On — used for summaries, tags and Deep Recall.'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleAI}
+                  disabled={aiLoading}
+                  role="switch"
+                  aria-checked={!item.aiOptOut}
+                  className={`shrink-0 w-10 h-[22px] rounded-full border border-ink relative transition-colors disabled:opacity-40 ${item.aiOptOut ? 'bg-white' : 'bg-ink'}`}
+                >
+                  <span className={`absolute top-[2px] w-4 h-4 rounded-full transition-all ${item.aiOptOut ? 'left-[2px] bg-ink' : 'left-[20px] bg-white'}`} />
+                </button>
               </div>
             </div>
 

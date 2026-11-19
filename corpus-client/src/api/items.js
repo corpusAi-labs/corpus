@@ -54,3 +54,25 @@ export async function retryItemAI(id) {
   const { data } = await api.post(`/items/${id}/retry-ai`)
   return data
 }
+
+export async function uploadPdf(file, { title, spaceId, aiOptOut } = {}, onProgress) {
+  const form = new FormData()
+  form.append('file', file)
+  if (title) form.append('title', title)
+  if (spaceId) form.append('spaceId', spaceId)
+  if (aiOptOut) form.append('aiOptOut', 'true')
+  const { data } = await api.post('/items/pdf', form, {
+    onUploadProgress: e => e.total && onProgress?.(Math.round((e.loaded * 100) / e.total)),
+  })
+  return data
+}
+
+export async function fetchItemFile(id) {
+  const res = await api.get(`/items/${id}/file`, { responseType: 'blob' })
+  return res.data
+}
+
+export async function fetchItemText(id) {
+  const { data } = await api.get(`/items/${id}/text`)
+  return data
+}

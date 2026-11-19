@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SpacePicker from '../spaces/SpacePicker.jsx'
 
@@ -7,9 +7,14 @@ const TYPES = [
   { value: 'note', label: 'NOTE', color: '#f74700' },
   { value: 'quote', label: 'QUOTE', color: '#259d27' },
   { value: 'image', label: 'IMAGE', color: '#faa200' },
+  { value: 'pdf', label: 'PDF', color: '#9439f9' },
 ]
 
-export default function SaveComposer({ isOpen, onClose, onSave, isSaving }) {
+const MAX_PDF_BYTES = 50 * 1024 * 1024
+const isPdfFile = f => f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name))
+const formatSize = b => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
+
+export default function SaveComposer({ isOpen, onClose, onSave, isSaving, initialFile }) {
   const [type, setType] = useState('link')
   const [url, setUrl] = useState('')
   const [content, setContent] = useState('')
@@ -18,11 +23,32 @@ export default function SaveComposer({ isOpen, onClose, onSave, isSaving }) {
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [error, setError] = useState('')
+  const [pdfFile, setPdfFile] = useState(null)
+  const [aiOptOut, setAiOptOut] = useState(false)
+  const [pdfDragOver, setPdfDragOver] = useState(false)
   const fileRef = useRef(null)
+  const pdfRef = useRef(null)
+
+  // A file dropped anywhere on the dashboard opens the composer pre-filled
+  useEffect(() => {
+    if (!isOpen || !initialFile) return
+    if (isPdfFile(initialFile)) { setType('pdf'); choosePdf(initialFile) }
+    else if (initialFile.type?.startsWith('image/')) {
+      setType('image'); setImageFile(initialFile); setImagePreview(URL.createObjectURL(initialFile))
+    } else setError("That file type isn't supported yet — try a PDF or an image.")
+  }, [isOpen, initialFile])
+
+  function choosePdf(file) {
+    setError('')
+    if (!isPdfFile(file)) return setError("That file isn't a PDF.")
+    if (file.size > MAX_PDF_BYTES) return setError('PDFs can be up to 50 MB.')
+    setPdfFile(file)
+  }
 
   function reset() {
     setType('link'); setUrl(''); setContent(''); setTitle(''); setSpaceId(null)
     setImageFile(null); setImagePreview(null); setError('')
+    setPdfFile(null); setAiOptOut(false); setPdfDragOver(false)
   }
   function handleClose() { reset(); onClose() }
 
@@ -39,9 +65,10 @@ export default function SaveComposer({ isOpen, onClose, onSave, isSaving }) {
     if (type === 'link' && !url.trim()) return setError('Paste a URL.')
     if ((type === 'note' || type === 'quote') && !content.trim()) return setError('Write something.')
     if (type === 'image' && !imageFile) return setError('Choose an image.')
+    if (type === 'pdf' && !pdfFile) return setError('Choose a PDF.')
 
     // Close the composer immediately so the user can see the animated saving card in the grid
-    onSave({ type, url, content, title, imageFile, spaceId })
+    onSave({ type, url, content, title, imageFile, pdfFile, aiOptOut, spaceId })
     handleClose()
   }
 
@@ -200,6 +227,65 @@ export default function SaveComposer({ isOpen, onClose, onSave, isSaving }) {
                         placeholder="Title (optional)"
                         className="w-full border-2 border-gray-100 rounded-[4px] p-4 text-[14px] font-circular focus:ring-0 focus:outline-none transition-all placeholder:text-gray-300 input-focus-image text-black"
                       />
+                    </div>
+                  )}
+
+                  {type === 'pdf' && (
+                    <div className="view-content flex flex-col gap-4">
+                      {pdfFile ? (
+                        <div className="flex items-center gap-4 border-2 border-gray-100 rounded-[8px] p-4">
+                          <div className="w-11 h-14 shrink-0 rounded-[4px] bg-[#9439f9] text-white flex items-end justify-center pb-1.5 text-[9px] font-bold font-circular tracking-wider shadow-[2px_2px_0px_black] border border-black">
+                            PDF
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[14px] font-bold font-circular text-black truncate">{pdfFile.name}</p>
+                            <p className="text-[12px] font-circular text-gray-400">{formatSize(pdfFile.size)} · encrypted before it's stored</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setPdfFile(null)}
+                            className="bg-white font-mono text-[10px] px-2 py-1 rounded-[4px] border border-black"
+                          >
+                            change
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => pdfRef.current?.click()}
+                          onDragOver={e => { e.preventDefault(); setPdfDragOver(true) }}
+                          onDragLeave={() => setPdfDragOver(false)}
+                          onDrop={e => { e.preventDefault(); e.stopPropagation(); setPdfDragOver(false); choosePdf(e.dataTransfer.files?.[0]) }}
+                          className={`w-full border-2 border-dashed rounded-[8px] flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer min-h-[140px] select-none py-6 ${pdfDragOver ? 'border-[#9439f9] bg-[#9439f9]/5' : 'border-gray-200 bg-gray-50/50 hover:border-[#9439f9]'}`}
+                        >
+                          <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z M14 3v5h5 M12 17v-6 M9 14l3-3 3 3" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+                          </svg>
+                          <span className="text-[13px] font-bold font-circular text-gray-400">Drop a PDF here or click to choose</span>
+                          <span className="text-[11px] font-circular text-gray-300">Every page becomes searchable · up to 50 MB</span>
+                        </div>
+                      )}
+                      <input ref={pdfRef} type="file" accept="application/pdf,.pdf" onChange={e => choosePdf(e.target.files?.[0])} className="hidden" />
+
+                      <input
+                        type="text"
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        placeholder="Title (optional — we'll use the filename)"
+                        className="w-full border-2 border-gray-100 rounded-[4px] p-4 text-[14px] font-circular focus:ring-0 focus:outline-none transition-all placeholder:text-gray-300 text-black focus:border-[#9439f9]"
+                      />
+
+                      <label className="flex items-start gap-3 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={aiOptOut}
+                          onChange={e => setAiOptOut(e.target.checked)}
+                          className="mt-0.5 w-4 h-4 accent-black"
+                        />
+                        <span className="text-[13px] font-circular text-gray-600 leading-snug">
+                          <b className="text-black">Keep this PDF away from AI.</b> It's still encrypted and searchable by its text,
+                          but never sent to an AI provider — so no summary or auto-tags.
+                        </span>
+                      </label>
                     </div>
                   )}
 

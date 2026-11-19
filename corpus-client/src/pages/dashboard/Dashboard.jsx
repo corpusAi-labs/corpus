@@ -9,7 +9,7 @@ import DetailPanel from '../../components/dashboard/DetailPanel.jsx'
 import ZenSearchModal from '../../components/dashboard/ZenSearchModal.jsx'
 import NoCreditsModal from '../../components/ui/NoCreditsModal.jsx'
 import useAuthStore from '../../store/authStore.js'
-import { fetchItems, searchItems as searchItemsApi, createItem, deleteItem, uploadImage, fetchAllTags } from '../../api/items.js'
+import { fetchItems, searchItems as searchItemsApi, createItem, deleteItem, uploadImage, uploadPdf, fetchAllTags } from '../../api/items.js'
 import { getMeApi } from '../../api/auth.js'
 
 export default function Dashboard() {
@@ -29,6 +29,36 @@ export default function Dashboard() {
   const [tagSearchQuery, setTagSearchQuery] = useState('')
   const [isZenOpen, setIsZenOpen] = useState(false)
   const [duplicateAlert, setDuplicateAlert] = useState(null)
+  const [toast, setToast] = useState(null) // { text }
+  const [uploadProgress, setUploadProgress] = useState(null) // { name, pct }
+  const [droppedFile, setDroppedFile] = useState(null)
+  const [dragActive, setDragActive] = useState(false)
+
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), 7000)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  // Drop a file anywhere on the dashboard to save it
+  const hasFiles = e => Array.from(e.dataTransfer?.types || []).includes('Files')
+  function handleDragOver(e) {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    if (!dragActive) setDragActive(true)
+  }
+  function handleDragLeave(e) {
+    if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget)) setDragActive(false)
+  }
+  function handleDrop(e) {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    setDroppedFile(file)
+    setIsComposerOpen(true)
+  }
 
   useEffect(() => {
     if (!duplicateAlert) return
@@ -88,7 +118,11 @@ export default function Dashboard() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: async ({ type, url, content, title, imageFile, spaceId }) => {
+    mutationFn: async ({ type, url, content, title, imageFile, pdfFile, aiOptOut, spaceId }) => {
+      if (type === 'pdf') {
+        setUploadProgress({ name: pdfFile.name, pct: 0 })
+        return uploadPdf(pdfFile, { title, spaceId, aiOptOut }, pct => setUploadProgress({ name: pdfFile.name, pct }))
+      }
       if (type === 'image') {
         const { url: uploadedUrl } = await uploadImage(imageFile)
         return createItem({ type, thumbnailUrl: uploadedUrl, title, spaceId })
@@ -96,13 +130,16 @@ export default function Dashboard() {
       if (type === 'link') return createItem({ type, url, spaceId })
       return createItem({ type, content, title, spaceId })
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setUploadProgress(null)
+      if (data?.notice) setToast({ text: data.notice })
       queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['me'] })
       queryClient.invalidateQueries({ queryKey: ['tags'] })
       setIsComposerOpen(false)
     },
     onError: (err) => {
+      setUploadProgress(null)
       if (err?.response?.status === 402) {
         setIsComposerOpen(false)
         setNoCredits(true)
@@ -110,6 +147,8 @@ export default function Dashboard() {
       } else if (err?.response?.status === 409) {
         const item = err?.response?.data?.item
         setDuplicateAlert(item || true)
+      } else {
+        setToast({ text: err?.response?.data?.error || err?.response?.data?.message || 'Saving failed. Please try again.' })
       }
     },
   })
@@ -204,12 +243,28 @@ export default function Dashboard() {
     { value: 'quote', label: 'Quotes', color: '#259d27' },
     { value: 'link', label: 'Links', color: '#0d5ddf' },
     { value: 'image', label: 'Images', color: '#faa200' },
+    { value: 'pdf', label: 'PDFs', color: '#9439f9' },
   ]
 
   return (
-    <div className="min-h-screen relative w-full">
+    <div
+      className="min-h-screen relative w-full"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Background grid overlay */}
       <div className="fixed inset-0 pointer-events-none bg-grid-overlay z-0" data-purpose="background-pattern"></div>
+
+      {/* Drop-anywhere overlay */}
+      {dragActive && (
+        <div className="fixed inset-0 z-[90] pointer-events-none flex items-center justify-center bg-[#9439f9]/10 backdrop-blur-[2px]">
+          <div className="border-[3px] border-dashed border-[#9439f9] rounded-[16px] bg-white px-10 py-8 shadow-[6px_6px_0px_black] text-center">
+            <p className="text-[28px] font-bold font-roc text-black">Drop to save</p>
+            <p className="text-[13px] font-circular text-gray-500 mt-1">PDFs become fully searchable · images too</p>
+          </div>
+        </div>
+      )}
 
       <div className="relative z-10 flex min-h-screen w-full">
         <Sidebar onOpenComposer={() => setIsComposerOpen(true)} />
@@ -461,9 +516,10 @@ export default function Dashboard() {
 
       <SaveComposer
         isOpen={isComposerOpen}
-        onClose={() => setIsComposerOpen(false)}
-        onSave={payload => saveMutation.mutateAsync(payload)}
+        onClose={() => { setIsComposerOpen(false); setDroppedFile(null) }}
+        onSave={payload => saveMutation.mutateAsync(payload).catch(() => {})}
         isSaving={saveMutation.isPending}
+        initialFile={droppedFile}
       />
 
       {selectedItem && (
@@ -483,11 +539,40 @@ export default function Dashboard() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         searchResults={searchResultsQuery.data?.items}
+        searchMode={searchResultsQuery.data?.mode}
         allRecentItems={allPages}
         isLoading={searchResultsQuery.isLoading}
         onSelectItem={(item) => setSelectedItem(item)}
         onDeleteItem={(id) => deleteMutation.mutate(id)}
       />
+
+      {/* Upload progress + general notices */}
+      <AnimatePresence>
+        {(uploadProgress || toast) && !duplicateAlert && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] bg-white border-2 border-black px-4 py-2.5 rounded-[4px] shadow-[4px_4px_0px_black] flex items-center gap-3 font-circular max-w-[calc(100vw-32px)]"
+          >
+            {uploadProgress ? (
+              <>
+                <span className="text-[13px] font-bold text-black truncate max-w-[260px]">Uploading {uploadProgress.name}</span>
+                <span className="w-28 h-2 rounded-full bg-gray-100 border border-black overflow-hidden shrink-0">
+                  <span className="block h-full bg-[#9439f9] transition-all" style={{ width: `${uploadProgress.pct}%` }} />
+                </span>
+                <span className="text-[12px] font-mono text-gray-500 w-9 text-right">{uploadProgress.pct}%</span>
+              </>
+            ) : (
+              <>
+                <span className="text-[13px] font-bold text-black">{toast.text}</span>
+                <button onClick={() => setToast(null)} className="text-gray-400 hover:text-black font-bold text-[14px] leading-none ml-2" title="Close">✕</button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Duplicate Alert Toast */}
       <AnimatePresence>

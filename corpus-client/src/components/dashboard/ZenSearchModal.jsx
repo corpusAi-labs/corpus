@@ -91,6 +91,7 @@ export default function ZenSearchModal({
   searchQuery,
   setSearchQuery,
   searchResults,
+  searchMode,
   allRecentItems = [],
   isLoading,
   onSelectItem,
@@ -284,6 +285,14 @@ export default function ZenSearchModal({
                   <span>
                     Found {searchResults?.length || 0} {searchResults?.length === 1 ? 'match' : 'matches'} for &ldquo;{searchQuery}&rdquo;
                   </span>
+                  {!isLoading && searchMode && (
+                    <span
+                      className={`ml-auto normal-case tracking-normal font-circular text-[11px] px-2 py-0.5 rounded-full border ${searchMode === 'vector' ? 'border-[#9439f9]/40 text-[#9439f9]' : 'border-black/15 text-black/50'}`}
+                      title={searchMode === 'vector' ? 'Matched by meaning' : 'Nothing matched by meaning, so these are keyword matches'}
+                    >
+                      {searchMode === 'vector' ? 'by meaning' : 'keyword matches'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Cards Grid */}

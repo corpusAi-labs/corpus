@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { FollowButton } from '../landing/Sidebar.jsx'
 
 export default function Sidebar({ onOpenComposer }) {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const creditsLeft = user?.credits ?? 0
@@ -203,14 +203,12 @@ export default function Sidebar({ onOpenComposer }) {
       </div>
 
       <div
-        className="side-nav-card relative overflow-hidden rounded-[10px] w-full h-[38px] cursor-pointer select-none group transition-all duration-200 z-50 shrink-0"
+        className={`side-nav-card relative overflow-hidden rounded-[10px] w-full h-[38px] cursor-pointer select-none group transition-all duration-200 z-50 shrink-0 border-2 border-black ${location.pathname === '/settings' ? 'bg-black text-white' : 'bg-white text-black hover:bg-black hover:text-white'}`}
         data-purpose="nav-item"
-        onClick={logout}
+        onClick={() => navigate('/settings')}
       >
-        <div className="absolute inset-0 bg-black"></div>
-        <div className="absolute inset-0 bg-[#f74700] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
-        <div className="absolute inset-0 flex items-center justify-center z-10 transition-transform duration-300 group-hover:scale-105">
-          <span className="text-[13px] font-bold text-white font-circular uppercase tracking-wider">Sign Out</span>
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <span className="text-[12px] font-bold font-circular uppercase tracking-wider">Privacy</span>
         </div>
       </div>
 
