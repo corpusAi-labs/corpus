@@ -7,16 +7,14 @@ export async function connectDB() {
     await mongoose.connect(uri)
     console.log('[db] connected to MongoDB')
 
-    // Drop old text index if it has different fields, then recreate via Mongoose
+    // Item content is encrypted at rest, so any MongoDB text index is useless
+    // (it would only index ciphertext). Drop it if an older version created one.
     try {
       const Item = mongoose.model('Item')
       const indexes = await Item.collection.listIndexes().toArray()
-      const oldTextIdx = indexes.find(
-        idx => idx.textIndexVersion && idx.name !== 'corpus_text_index'
-      )
-      if (oldTextIdx) {
-        await Item.collection.dropIndex(oldTextIdx.name)
-        console.log('[db] dropped old text index:', oldTextIdx.name)
+      for (const idx of indexes.filter(i => i.textIndexVersion)) {
+        await Item.collection.dropIndex(idx.name)
+        console.log('[db] dropped text index:', idx.name)
       }
     } catch (e) {
       // collection may not exist yet — that's fine

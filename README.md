@@ -45,7 +45,25 @@ Corpus is a full-stack personal knowledge management app. Save links, notes, and
 | Database      | MongoDB                                    |
 | AI            | Groq (LLaMA) — summarization & tagging     |
 | Auth          | JWT (access + refresh tokens)              |
+| Security      | AES-256-GCM envelope encryption, pluggable KMS, audit log |
 | Deployment    | Vercel (frontend), Render (backend)        |
+
+---
+
+## 🔐 Security & Privacy
+
+User content is **encrypted before it reaches the database**, with a key unique to each account.
+
+- **Envelope encryption.** Each user has their own 256-bit data key, stored only in wrapped form under a master key that never touches MongoDB. The master key comes from an env var or **Google Cloud KMS**, behind a pluggable provider.
+- **Field-level AES-256-GCM**, bound to the owner and field via AAD. Tag filters and duplicate detection use per-user **blind indexes**.
+- **Crypto-shredding.** Deleting an account destroys its key, so its data is unreadable even in old backups.
+- **Access log.** Every decrypt, whether by the user or by a background AI job, is recorded. Users can view it and download it as CSV.
+- **Hardened auth.** Refresh tokens are hashed and rotated, with theft (reuse) detection; OTPs are HMAC-hashed with an attempt lockout; layered rate limits; strict CORS.
+- **Private media.** Uploads are served via expiring signed URLs.
+- **User controls.** Export all data as JSON, sign out everywhere, delete account.
+- **PDFs.** Encrypted file storage; every page searchable through an encrypted word index and semantic vectors; AI summaries and key points; parsing in a locked-down worker thread; a restart-safe job queue; a per-item "keep away from AI" switch.
+
+Threat model, diagrams, trade-offs and runbooks: **[docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md)**
 
 ---
 
@@ -67,11 +85,15 @@ cd corpus
 npm install
 
 # Set up environment variables
-cp .env.example .env
-# Add your MongoDB URI, JWT secrets, and Groq API key
+cp corpus-server/.env.example corpus-server/.env
+# Add your MongoDB URI, JWT secrets, Groq API key, and an encryption key:
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"  # → DATA_ENCRYPTION_KEY
 
 # Run locally
 npm run dev
+
+# Tests (needs a MongoDB to create throwaway databases in)
+cd corpus-server && TEST_MONGO_URI=mongodb://127.0.0.1:27017 npm test
 ```
 
 
@@ -89,7 +111,9 @@ corpus/
 ---
 
 ## 🗺️ future roadmap
-- [ ] Vector search / RAG for semantic recall
+- [x] Vector search / RAG for semantic recall
+- [x] Encryption at rest with per-user keys
+- [ ] Encrypted embeddings
 - [ ] Redis caching layer
 - [ ] CI/CD pipeline
 - [ ] Mobile app

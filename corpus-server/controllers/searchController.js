@@ -1,9 +1,63 @@
 import mongoose from 'mongoose'
 import Item from '../models/Item.js'
 import { generateEmbedding } from '../services/embedding.js'
+import { blindIndexFor } from '../services/crypto.js'
+import { presentItem } from '../services/media.js'
+import { searchDocumentsByKeyword, searchDocumentsByVector } from '../services/search/documentSearch.js'
+import { vectorQuery } from '../services/search/vectorStore.js'
+import { tokenize } from '../services/search/tokenize.js'
 
-function escapeRegex(string) {
-  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+// Max items scanned for in-app keyword search (content is encrypted at rest,
+// so MongoDB can't run $text / $regex over it).
+const KEYWORD_SCAN_LIMIT = 3000
+
+// Same relative weights the old MongoDB text index used
+const KEYWORD_FIELD_WEIGHTS = {
+  title: 10, tags: 8, summary: 6, content: 4, contentType: 4, note: 3, url: 2,
+}
+
+/**
+ * Keyword search over decrypted items. Scores every term against each field
+ * (whole-word hits count double) and returns the best matches.
+ */
+export async function executeKeywordSearch({ baseQuery, q, limit, sortDirection, withScores = false }) {
+  const terms = buildSearchQuery(q.toLowerCase())
+  if (terms.length === 0) return []
+
+  const candidates = await Item.find(baseQuery)
+    .sort({ _id: -1 })
+    .limit(KEYWORD_SCAN_LIMIT)
+
+  const scored = []
+  for (const item of candidates) {
+    let score = 0
+    for (const [field, weight] of Object.entries(KEYWORD_FIELD_WEIGHTS)) {
+      const raw = item[field]
+      const text = (Array.isArray(raw) ? raw.join(' ') : raw || '').toLowerCase()
+      if (!text) continue
+      for (const term of terms) {
+        if (!text.includes(term)) continue
+        score += weight * (hasWholeWord(text, term) ? 2 : 1)
+      }
+    }
+    if (score > 0) scored.push({ item, score })
+  }
+
+  scored.sort((a, b) =>
+    b.score - a.score || sortDirection * (a.item.createdAt - b.item.createdAt)
+  )
+  return withScores ? scored : scored.slice(0, limit).map(s => s.item)
+}
+
+const WORD_CHAR = /[\p{L}\p{N}]/u
+
+function hasWholeWord(text, term) {
+  for (let i = text.indexOf(term); i !== -1; i = text.indexOf(term, i + 1)) {
+    const before = text[i - 1]
+    const after = text[i + term.length]
+    if ((!before || !WORD_CHAR.test(before)) && (!after || !WORD_CHAR.test(after))) return true
+  }
+  return false
 }
 
 /**
@@ -18,65 +72,37 @@ export function buildSearchQuery(q) {
  * Executes a MongoDB Atlas $vectorSearch query using the 'vector_index' index.
  * Handles userId filtering, post-matching for deleted/archived status, and score projection.
  */
-export async function executeVectorSearch({ userId, queryText, limit = 40, type, tag, spaceId }) {
+export async function executeVectorSearch({ userId, queryText, limit = 40, type, tag, spaceId, queryVector }) {
   // Use RETRIEVAL_QUERY task type specifically tuned for search queries
-  const queryVector = await generateEmbedding(queryText, 'RETRIEVAL_QUERY')
+  queryVector ??= await generateEmbedding(queryText, 'RETRIEVAL_QUERY')
   if (!queryVector || !Array.isArray(queryVector)) {
     return []
   }
 
-  const userObjectId = new mongoose.Types.ObjectId(userId)
   const matchStage = {
     deletedAt: null,
     archived: false,
   }
   if (type) matchStage.type = type
-  if (tag) matchStage.tags = tag
-  if (spaceId) {
-    try {
-      matchStage.spaceId = new mongoose.Types.ObjectId(spaceId)
-    } catch {
-      matchStage.spaceId = spaceId
-    }
-  }
+  if (tag) matchStage.tagIndex = await blindIndexFor(userId, tag, 'Item.tags')
+  if (spaceId && mongoose.isValidObjectId(spaceId)) matchStage.spaceId = new mongoose.Types.ObjectId(spaceId)
 
-  const pipeline = [
-    {
-      $vectorSearch: {
-        index: 'vector_index',
-        path: 'embedding',
-        queryVector,
-        numCandidates: Math.max(limit * 5, 50),
-        limit: Math.max(limit * 2, 30),
-        filter: {
-          userId: userObjectId,
-        },
-      },
-    },
-    {
-      $match: matchStage,
-    },
-    {
-      $addFields: {
-        score: { $meta: 'vectorSearchScore' },
-      },
-    },
-    {
-      $project: {
-        embedding: 0,
-      },
-    },
-  ]
-
-  const rawResults = await Item.aggregate(pipeline)
+  const rawResults = await vectorQuery(Item, {
+    indexName: 'vector_index',
+    userId,
+    queryVector,
+    k: Math.max(limit * 2, 30),
+    filter: matchStage,
+    project: { embedding: 0, tagIndex: 0, urlHash: 0 },
+  })
   if (!rawResults || rawResults.length === 0) return []
 
-  const keywords = queryText.toLowerCase().split(/\s+/).filter(Boolean)
+  // Meaningful query words only (no stopwords like "at", "if", "my")
+  const keywords = tokenize(queryText).filter(w => w.length >= 3)
   const topVectorScore = rawResults[0]?.score || 0
 
-  // Hybrid relevance calculation: Vector cosine similarity + keyword boost
+  // Hybrid relevance: semantic similarity + a small bonus per whole-word keyword hit
   const scored = rawResults.map(item => {
-    let keywordBonus = 0
     const textBlob = [
       item.title,
       Array.isArray(item.tags) ? item.tags.join(' ') : '',
@@ -86,13 +112,10 @@ export async function executeVectorSearch({ userId, queryText, limit = 40, type,
       item.contentType,
     ].filter(Boolean).join(' ').toLowerCase()
 
-    for (const kw of keywords) {
-      if (textBlob.includes(kw)) {
-        keywordBonus += 0.08
-      }
-    }
-
-    const hasKeyword = keywordBonus > 0
+    const matched = keywords.filter(kw => hasWholeWord(textBlob, kw)).length
+    const keywordBonus = Math.min(0.15, matched * 0.05)
+    // A keyword hit only rescues a weak semantic score when it covers most of the query
+    const hasKeyword = keywords.length > 0 && matched / keywords.length >= 0.5
     const vectorScore = item.score || 0
     const finalScore = vectorScore + keywordBonus
 
@@ -102,7 +125,8 @@ export async function executeVectorSearch({ userId, queryText, limit = 40, type,
   // Filter out noise cards that have zero keyword match and low similarity
   // Discard items that fall too far below the top relevance score to avoid dumping unrelated cards
   const minThreshold = Math.max(0.795, topVectorScore - 0.065)
-  const filtered = scored.filter(s => s.hasKeyword || s.finalScore >= minThreshold)
+  // Inclusion is decided on meaning (vector score); keyword bonuses only affect the order
+  const filtered = scored.filter(s => s.hasKeyword || s.vectorScore >= minThreshold)
 
   filtered.sort((a, b) => b.finalScore - a.finalScore)
 
@@ -110,6 +134,15 @@ export async function executeVectorSearch({ userId, queryText, limit = 40, type,
     ...s.item,
     score: s.finalScore,
   }))
+}
+
+/** Item-level filters shared by every search path. */
+async function itemFilterFor(req, baseQuery) {
+  const filter = { ...baseQuery }
+  if (req.query.type) filter.type = req.query.type
+  if (req.query.tag) filter.tagIndex = await blindIndexFor(req.user.id, req.query.tag, 'Item.tags')
+  if (req.query.spaceId) filter.spaceId = req.query.spaceId
+  return filter
 }
 
 /**
@@ -138,7 +171,7 @@ export async function smartSearch(req, res) {
       const query = { ...baseQuery }
 
       if (type) query.type = type
-      if (tag) query.tags = tag
+      if (tag) query.tagIndex = await blindIndexFor(req.user.id, tag, 'Item.tags')
       if (spaceId) query.spaceId = spaceId
       if (cursor) {
         query._id = sortDirection === -1 ? { $lt: cursor } : { $gt: cursor }
@@ -149,7 +182,7 @@ export async function smartSearch(req, res) {
       const page = hasMore ? items.slice(0, limit) : items
 
       return res.json({
-        items: page,
+        items: page.map(presentItem),
         nextCursor: hasMore ? page[page.length - 1]._id : null,
       })
     }
@@ -160,69 +193,58 @@ export async function smartSearch(req, res) {
     // 1. Primary path for Deep Recall / Vector Search
     if (mode === 'vector' || mode === 'deep') {
       try {
+        const queryVector = await generateEmbedding(q, 'RETRIEVAL_QUERY')
         const vectorResults = await executeVectorSearch({
           userId: req.user.id,
           queryText: q,
+          queryVector,
           limit,
           type: req.query.type,
           tag: req.query.tag,
           spaceId: req.query.spaceId,
         })
 
-        if (vectorResults && vectorResults.length > 0) {
-          return res.json({ items: vectorResults, mode: 'vector' })
+        // Pages inside documents (best-effort: needs the Atlas chunk index)
+        const docHits = queryVector
+          ? await searchDocumentsByVector({ userId: req.user.id, queryVector, itemFilter: await itemFilterFor(req, baseQuery), limit, q })
+              .catch(err => { console.warn('[smartSearch] chunk vector search unavailable:', err.message); return [] })
+          : []
+
+        const merged = new Map(vectorResults.map(i => [String(i._id), { out: presentItem(i), score: i.score || 0 }]))
+        for (const h of docHits) {
+          const id = String(h.item._id)
+          const prev = merged.get(id)
+          if (!prev || prev.score < h.score) merged.set(id, { out: { ...presentItem(h.item), score: h.score, match: h.match }, score: h.score })
+          else prev.out.match ??= h.match
+        }
+        if (merged.size > 0) {
+          const items = [...merged.values()].sort((a, b) => b.score - a.score).slice(0, limit).map(m => m.out)
+          return res.json({ items, mode: 'vector' })
         }
       } catch (vectorErr) {
         console.warn('[smartSearch] Vector search failed, falling back to text search:', vectorErr.message)
       }
     }
 
-    // 2. Full-Text Search using MongoDB Inverted Text Index
-    const searchQuery = {
-      ...baseQuery,
-      $text: { $search: q },
+    // 2. Keyword search: item fields (in-app, decrypted) + every page of every
+    //    document (encrypted inverted index), merged by score
+    const keywordQuery = await itemFilterFor(req, baseQuery)
+    const [itemHits, docHits] = await Promise.all([
+      executeKeywordSearch({ baseQuery: keywordQuery, q, limit, sortDirection, withScores: true }),
+      searchDocumentsByKeyword({ userId: req.user.id, q, itemFilter: keywordQuery }),
+    ])
+
+    const merged = new Map()
+    for (const h of itemHits) merged.set(String(h.item._id), { item: h.item, score: h.score })
+    for (const h of docHits) {
+      const id = String(h.item._id)
+      const prev = merged.get(id)
+      merged.set(id, { item: h.item, score: (prev?.score || 0) + h.score, match: h.match })
     }
-
-    if (req.query.type) searchQuery.type = req.query.type
-    if (req.query.tag) searchQuery.tags = req.query.tag
-    if (req.query.spaceId) searchQuery.spaceId = req.query.spaceId
-
-    let items = []
-    try {
-      items = await Item.find(
-        searchQuery,
-        { score: { $meta: 'textScore' } }
-      )
-        .sort({
-          score: { $meta: 'textScore' },
-          createdAt: sortDirection,
-        })
-        .limit(limit)
-    } catch (textErr) {
-      console.warn('[smartSearch] $text query failed or index rebuilding, falling back to regex:', textErr.message)
-    }
-
-    // 3. Fallback path: If $text yielded no results (e.g. short queries or prefix matching)
-    if (items.length === 0 && q.length >= 2) {
-      const escaped = escapeRegex(q)
-      const regex = new RegExp(escaped, 'i')
-      const fallbackQuery = {
-        ...baseQuery,
-        $or: [
-          { title: { $regex: regex } },
-          { tags: { $regex: regex } },
-          { summary: { $regex: regex } },
-          { note: { $regex: regex } },
-        ],
-      }
-      if (req.query.type) fallbackQuery.type = req.query.type
-      if (req.query.tag) fallbackQuery.tags = req.query.tag
-      if (req.query.spaceId) fallbackQuery.spaceId = req.query.spaceId
-
-      items = await Item.find(fallbackQuery)
-        .sort({ createdAt: sortDirection })
-        .limit(limit)
-    }
+    const items = [...merged.values()]
+      .sort((a, b) => b.score - a.score || sortDirection * (a.item.createdAt - b.item.createdAt))
+      .slice(0, limit)
+      .map(m => (m.match ? { ...presentItem(m.item), match: m.match } : presentItem(m.item)))
 
     return res.json({ items, mode: 'text' })
   } catch (err) {

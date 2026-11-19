@@ -5,7 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test --test-concurrency=1 tests/",
+    "encrypt:migrate": "node scripts/encryptExistingData.js",
+    "keys:rotate": "node scripts/rotateKeys.js",
+    "backfill:embeddings": "node scripts/backfillEmbeddings.js",
+    "search:indexes": "node scripts/createSearchIndexes.js",
+    "search:reindex": "node scripts/reindexChunks.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -28,6 +34,7 @@
     "passport-google-oauth20": "^2.0.0",
     "puppeteer": "^24.4.0",
     "resend": "^6.26.0",
+    "unpdf": "^0.12.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

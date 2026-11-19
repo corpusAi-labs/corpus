@@ -1,14 +1,14 @@
 import { Router } from 'express'
 import multer from 'multer'
 import { authMiddleware } from '../middleware/authMiddleware.js'
-import { uploadBuffer } from '../services/cloudinary.js'
+import { uploadPrivate, deliveryUrl } from '../services/media.js'
 
 const router = Router()
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
+    if (!/^image\/(png|jpe?g|gif|webp|avif|heic|heif)$/i.test(file.mimetype)) {
       return cb(new Error('Only image files are allowed'))
     }
     cb(null, true)
@@ -28,8 +28,10 @@ router.post('/', upload.single('file'), async (req, res) => {
     })
   }
   try {
-    const url = await uploadBuffer(req.file.buffer)
-    return res.json({ url })
+    // Private, per-user asset. `url` is an opaque ref the client passes back as
+    // thumbnailUrl when saving; `previewUrl` is a short-lived signed link.
+    const ref = await uploadPrivate(req.file.buffer, req.user.id)
+    return res.json({ url: ref, ref, previewUrl: deliveryUrl(ref) })
   } catch (err) {
     console.error('[upload]', err.message)
     return res.status(500).json({ error: 'Upload failed' })

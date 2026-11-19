@@ -107,3 +107,36 @@ export async function generateEmbedding(text, taskType = 'RETRIEVAL_DOCUMENT', m
 
   return null
 }
+
+const BATCH_SIZE = 100 // Gemini batchEmbedContents limit
+
+/**
+ * Embed many texts in batches (one API call per 100). Returns an array aligned
+ * with `texts`; entries are null where embedding failed.
+ */
+export async function generateEmbeddingsBatch(texts, taskType = 'RETRIEVAL_DOCUMENT', maxRetries = 2) {
+  const out = new Array(texts.length).fill(null)
+  const model = getClient().getGenerativeModel({ model: EMBEDDING_MODEL })
+
+  for (let start = 0; start < texts.length; start += BATCH_SIZE) {
+    const slice = texts.slice(start, start + BATCH_SIZE)
+    const requests = slice.map(t => ({
+      content: { role: 'user', parts: [{ text: String(t || ' ').slice(0, MAX_TEXT_LENGTH) }] },
+      taskType,
+      outputDimensionality: EMBEDDING_DIMENSIONS,
+    }))
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const res = await model.batchEmbedContents({ requests })
+        res.embeddings.forEach((e, i) => {
+          if (Array.isArray(e?.values) && e.values.length === EMBEDDING_DIMENSIONS) out[start + i] = e.values
+        })
+        break
+      } catch (err) {
+        if (attempt >= maxRetries) throw err
+        await new Promise(r => setTimeout(r, 1000 * 2 ** attempt))
+      }
+    }
+  }
+  return out
+}

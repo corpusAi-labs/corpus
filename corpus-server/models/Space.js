@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import encryptedFieldsPlugin from './plugins/encryptedFields.js'
 
 const spaceSchema = new mongoose.Schema(
   {
@@ -10,5 +11,6 @@ const spaceSchema = new mongoose.Schema(
 )
 
 spaceSchema.index({ userId: 1, createdAt: -1 })
+spaceSchema.plugin(encryptedFieldsPlugin, { model: 'Space', fields: ['name'] })
 
 export default mongoose.model('Space', spaceSchema)

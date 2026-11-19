@@ -8,9 +8,13 @@ const otpSchema = new mongoose.Schema({
     trim: true,
     index: true,
   },
-  otp: {
-    type: String,
+  otpHash: {
+    type: String, // HMAC of the code — the code itself is never stored
     required: true,
+  },
+  attempts: {
+    type: Number,
+    default: 0,
   },
   name: {
     type: String,

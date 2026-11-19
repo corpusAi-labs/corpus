@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import passport from '../config/passport.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
+import { authLimiter, otpLimiter, emailLimiter } from '../middleware/rateLimits.js'
 import {
   signup,
   verifyOtp,
@@ -17,14 +18,14 @@ import {
 const router = Router()
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
 
-router.post('/signup', signup)
-router.post('/verify-otp', verifyOtp)
-router.post('/resend-otp', resendOtp)
-router.post('/login', login)
+router.post('/signup', authLimiter, emailLimiter, signup)
+router.post('/verify-otp', otpLimiter, verifyOtp)
+router.post('/resend-otp', emailLimiter, resendOtp)
+router.post('/login', authLimiter, login)
 router.post('/logout', logout)
-router.post('/refresh', refresh)
-router.post('/request-password-setup', requestPasswordSetup)
-router.post('/confirm-password-setup', confirmPasswordSetup)
+router.post('/refresh', refresh) // covered by the global API limiter; must tolerate many tabs behind one NAT
+router.post('/request-password-setup', authLimiter, emailLimiter, requestPasswordSetup)
+router.post('/confirm-password-setup', otpLimiter, confirmPasswordSetup)
 router.get('/me', authMiddleware, getMe)
 
 router.get('/google', (req, res, next) => {

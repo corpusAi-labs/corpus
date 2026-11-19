@@ -39,7 +39,7 @@ export function detectContentType(url) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-async function callGroq(messages) {
+export async function callGroq(messages) {
   let lastError
   const maxAttempts = 2
   for (const model of MODELS) {

@@ -1,73 +1,31 @@
 import 'dotenv/config'
-import express from 'express'
-import cors from 'cors'
-import helmet from 'helmet'
-import cookieParser from 'cookie-parser'
-import passport from './config/passport.js'
+import { getEnv } from './config/env.js'
 import { connectDB } from './config/db.js'
-import authRoutes from './routes/auth.js'
-import itemRoutes from './routes/items.js'
-import uploadRoutes from './routes/upload.js'
-import spaceRoutes from './routes/spaces.js'
-
-const app = express()
-const PORT = process.env.PORT || 5001
-
-const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'https://corpus-kappa-one.vercel.app',
-  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
-]
-
-app.use(helmet({
-  crossOriginOpenerPolicy: { policy: "unsafe-none" },
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}))
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // allow no-origin requests (curl, Chrome extension), localhost on any port, local IPs, and known origins
-      if (
-        !origin ||
-        ALLOWED_ORIGINS.includes(origin) ||
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('http://127.0.0.1:') ||
-        origin.startsWith('http://192.168.') ||
-        origin.startsWith('http://172.') ||
-        origin.startsWith('http://10.') ||
-        origin.startsWith('chrome-extension://')
-      ) {
-        callback(null, true)
-      } else {
-        callback(new Error('Not allowed by CORS'))
-      }
-    },
-    credentials: true,
-  })
-)
-app.use(express.json())
-app.use(cookieParser())
-app.use(passport.initialize())
-
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'corpus-server' })
-})
-
-app.use('/api/auth', authRoutes)
-app.use('/api/items', itemRoutes)
-app.use('/api/upload', uploadRoutes)
-app.use('/api/spaces', spaceRoutes)
+import { assertEncryptionConfigured } from './services/crypto.js'
+import { scheduleTrashPurge } from './jobs/purgeTrash.js'
+import { registerPdfJobs } from './jobs/processPdf.js'
+import { startWorkers } from './services/queue.js'
+import { createApp } from './app.js'
 
 async function start() {
+  const env = getEnv() // throws with a readable list of problems if misconfigured
+  await assertEncryptionConfigured() // KEK provider must be reachable before we accept traffic
   await connectDB()
-  app.listen(PORT, () => {
-    console.log(`[server] running on http://localhost:${PORT}`)
-    console.log(`[server] NODE_ENV=${process.env.NODE_ENV || 'not set'}`)
-    console.log(`[server] GROQ_API_KEY is ${process.env.GROQ_API_KEY ? 'SET (' + process.env.GROQ_API_KEY.slice(0, 8) + '...)' : 'MISSING — AI tagging will not work'}`)
-    console.log(`[server] GOOGLE_CLIENT_ID is ${process.env.GOOGLE_CLIENT_ID ? 'SET (' + process.env.GOOGLE_CLIENT_ID.slice(0, 12) + '...)' : 'MISSING'}`)
-    console.log(`[server] GOOGLE_CLIENT_SECRET is ${process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'MISSING'}`)
+
+  const app = createApp()
+  app.listen(env.PORT, () => {
+    console.log(`[server] running on http://localhost:${env.PORT} (NODE_ENV=${env.NODE_ENV})`)
+    console.log(`[server] key provider: ${env.KEY_PROVIDER}`)
+    console.log(`[server] GROQ_API_KEY ${process.env.GROQ_API_KEY ? 'set' : 'MISSING — AI tagging disabled'}`)
+    console.log(`[server] Google OAuth ${process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? 'configured' : 'not configured'}`)
   })
+
+  scheduleTrashPurge()
+  registerPdfJobs()
+  startWorkers() // background job queue (PDF processing); safe to run on every instance
 }
 
-start()
+start().catch(err => {
+  console.error(err.message)
+  process.exit(1)
+})

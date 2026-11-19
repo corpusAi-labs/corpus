@@ -4,6 +4,11 @@ import { z } from 'zod'
 import User from '../models/User.js'
 import Otp from '../models/Otp.js'
 import { sendOtpEmail } from '../services/emailService.js'
+import { randomUUID } from 'crypto'
+import {
+  hashOtp, generateOtp, safeEqual, hasSession, addSession, removeSession, rotateSession, wasJustRotated, MAX_OTP_ATTEMPTS,
+} from '../services/authTokens.js'
+import { auditEvent } from '../services/audit.js'
 
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -21,7 +26,27 @@ function setAccessTokenCookie(res, token){
 }
 
 function generateRefreshToken(userId) {
-  return jwt.sign({ id: userId }, process.env.REFRESH_SECRET, { expiresIn: '30d' })
+  // jti makes every token unique, so rotation can tell tokens apart
+  return jwt.sign({ id: userId, jti: randomUUID() }, process.env.REFRESH_SECRET, { expiresIn: '7d' })
+}
+
+/**
+ * Check a submitted OTP against the pending record for this email.
+ * Returns null on success, or an [status, message] tuple on failure.
+ * Wrong guesses are counted; after MAX_OTP_ATTEMPTS the code is burned.
+ */
+async function checkOtp(email, otp) {
+  const record = await Otp.findOne({ email })
+  if (!record) return [null, [400, 'Invalid or expired verification code.']]
+  if (record.attempts >= MAX_OTP_ATTEMPTS) {
+    await Otp.deleteMany({ email })
+    return [null, [429, 'Too many incorrect attempts. Please request a new code.']]
+  }
+  if (!safeEqual(record.otpHash, hashOtp(email, otp))) {
+    await Otp.updateOne({ _id: record._id }, { $inc: { attempts: 1 } })
+    return [null, [400, 'Invalid or expired verification code.']]
+  }
+  return [record, null]
 }
 
 function setRefreshTokenCookie(res, token) {
@@ -74,12 +99,12 @@ export async function signup(req, res) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const otp = generateOtp()
 
     await Otp.deleteMany({ email })
     await Otp.create({
       email,
-      otp,
+      otpHash: hashOtp(email, otp),
       name,
       passwordHash,
     })
@@ -111,10 +136,8 @@ export async function verifyOtp(req, res) {
     const existing = await User.findOne({ email })
     if (existing) return res.status(409).json({ error: 'An account with this email already exists.' })
 
-    const otpRecord = await Otp.findOne({ email, otp })
-    if (!otpRecord) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' })
-    }
+    const [otpRecord, otpError] = await checkOtp(email, otp)
+    if (otpError) return res.status(otpError[0]).json({ error: otpError[1] })
 
     const user = await User.create({
       name: otpRecord.name,
@@ -130,9 +153,9 @@ export async function verifyOtp(req, res) {
     const accessToken = generateAccessToken(user._id)
     const refreshToken = generateRefreshToken(user._id)
 
-    user.refreshTokens = user.refreshTokens || []
-    user.refreshTokens.push(refreshToken)
+    addSession(user, refreshToken)
     await user.save()
+    auditEvent(user._id, 'auth.signup', 'Account created', req)
 
     setRefreshTokenCookie(res, refreshToken)
     setAccessTokenCookie(res, accessToken)
@@ -165,8 +188,13 @@ export async function resendOtp(req, res) {
       return res.status(400).json({ error: 'No pending registration found. Please fill in signup details again.' })
     }
 
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString()
-    pending.otp = newOtp
+    if (Date.now() - pending.createdAt.getTime() < 60 * 1000) {
+      return res.status(429).json({ error: 'Please wait a minute before requesting another code.' })
+    }
+
+    const newOtp = generateOtp()
+    pending.otpHash = hashOtp(email, newOtp)
+    pending.attempts = 0
     pending.createdAt = new Date()
     await pending.save()
 
@@ -205,17 +233,17 @@ export async function login(req, res) {
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) return res.status(401).json({ error: 'Invalid email or password.' })
+    if (!valid) {
+      auditEvent(user._id, 'auth.login_failed', 'Failed sign-in attempt (wrong password)', req)
+      return res.status(401).json({ error: 'Invalid email or password.' })
+    }
 
     const accessToken = generateAccessToken(user._id)
     const refreshToken = generateRefreshToken(user._id)
 
-    user.refreshTokens = user.refreshTokens || []
-    user.refreshTokens.push(refreshToken)
-    if (user.refreshTokens.length > 10) {
-      user.refreshTokens = user.refreshTokens.slice(-10)
-    }
+    addSession(user, refreshToken)
     await user.save()
+    auditEvent(user._id, 'auth.login', 'Signed in with password', req)
 
     setRefreshTokenCookie(res, refreshToken)
     setAccessTokenCookie(res, accessToken)
@@ -243,12 +271,12 @@ export async function requestPasswordSetup(req, res) {
     const user = await User.findOne({ email })
     if (!user) return res.status(404).json({ error: 'No account found with this email.' })
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const otp = generateOtp()
 
     await Otp.deleteMany({ email })
     await Otp.create({
       email,
-      otp,
+      otpHash: hashOtp(email, otp),
       name: user.name || 'User',
       passwordHash: 'SETUP_PASSWORD_PENDING',
     })
@@ -290,14 +318,14 @@ export async function confirmPasswordSetup(req, res) {
     const user = await User.findOne({ email })
     if (!user) return res.status(404).json({ error: 'User not found.' })
 
-    const otpRecord = await Otp.findOne({ email, otp })
-    if (!otpRecord) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' })
-    }
+    const [, otpError] = await checkOtp(email, otp)
+    if (otpError) return res.status(otpError[0]).json({ error: otpError[1] })
 
     const passwordHash = await bcrypt.hash(password, 12)
     user.passwordHash = passwordHash
+    user.refreshTokens = [] // credential change: sign out every existing session
     await user.save()
+    auditEvent(user._id, 'auth.password_set', 'Password set — all other sessions signed out', req)
 
     // Clean up OTP record
     await Otp.deleteMany({ email })
@@ -317,7 +345,12 @@ export async function logout(req, res) {
   if (refreshToken) {
     try {
       const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET)
-      await User.findByIdAndUpdate(decoded.id, { $pull: { refreshTokens: refreshToken } })
+      const user = await User.findById(decoded.id)
+      if (user) {
+        removeSession(user, refreshToken)
+        await user.save()
+        auditEvent(user._id, 'auth.logout', 'Signed out', req)
+      }
     } catch (err) {
       console.warn('[logout] token verification or database pull failed:', err.message)
     }
@@ -357,21 +390,25 @@ export async function refresh(req, res) {
   try {
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET)
     const user = await User.findById(decoded.id)
-    if (!user || !user.refreshTokens || !user.refreshTokens.includes(refreshToken)) {
+    if (!user) return res.status(401).json({ error: 'Invalid or revoked refresh token.' })
+
+    const concurrent = !hasSession(user, refreshToken) && wasJustRotated(user, refreshToken)
+    if (!hasSession(user, refreshToken) && !concurrent) {
+      // A validly-signed token that was already rotated away is being replayed:
+      // assume it was stolen and revoke every session for this user.
+      user.refreshTokens = []
+      await user.save()
+      auditEvent(user._id, 'auth.token_reuse', 'Reused session token detected — all sessions signed out', req)
       return res.status(401).json({ error: 'Invalid or revoked refresh token.' })
     }
 
     const accessToken = generateAccessToken(user._id)
     const newRefreshToken = generateRefreshToken(user._id)
 
-    // Rotate refresh token: add new token, keep up to 20 recent active tokens
-    user.refreshTokens = user.refreshTokens || []
-    if (!user.refreshTokens.includes(newRefreshToken)) {
-      user.refreshTokens.push(newRefreshToken)
-    }
-    if (user.refreshTokens.length > 20) {
-      user.refreshTokens = user.refreshTokens.slice(-20)
-    }
+    // Rotate: the presented token is consumed and replaced. A second tab racing
+    // with an already-rotated token just gets a fresh session of its own.
+    if (concurrent) addSession(user, newRefreshToken)
+    else rotateSession(user, refreshToken, newRefreshToken)
     await user.save()
 
     setRefreshTokenCookie(res, newRefreshToken)
@@ -402,12 +439,9 @@ export async function googleCallback(req, res) {
     const accessToken = generateAccessToken(user._id)
     const refreshToken = generateRefreshToken(user._id)
 
-    user.refreshTokens = user.refreshTokens || []
-    user.refreshTokens.push(refreshToken)
-    if (user.refreshTokens.length > 10) {
-      user.refreshTokens = user.refreshTokens.slice(-10)
-    }
+    addSession(user, refreshToken)
     await user.save()
+    auditEvent(user._id, 'auth.login', 'Signed in with Google', req)
 
     // 1. Set httpOnly cookies for both tokens
     setRefreshTokenCookie(res, refreshToken)
