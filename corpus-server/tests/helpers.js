@@ -14,7 +14,15 @@ export const skipNoDb = TEST_MONGO_URI ? false : 'set TEST_MONGO_URI to run DB-b
 export const TEST_KEK = crypto.createHash('sha256').update('corpus-test-kek').digest('base64')
 
 /** Must run before importing any app module (config is read at import time). */
+export const TEST_REDIS_URL = process.env.TEST_REDIS_URL
+
 export function setupEnv(dbName, overrides = {}) {
+  if (TEST_REDIS_URL) {
+    process.env.REDIS_URL = TEST_REDIS_URL
+    process.env.REDIS_KEY_PREFIX = `corpus-test:${dbName}:${crypto.randomBytes(4).toString('hex')}:`
+  } else {
+    delete process.env.REDIS_URL
+  }
   Object.assign(process.env, {
     NODE_ENV: 'test',
     MONGO_URI: TEST_MONGO_URI ? `${TEST_MONGO_URI.replace(/\/$/, '')}/${dbName}` : 'mongodb://unused',
@@ -100,3 +108,9 @@ export async function startServer() {
 }
 
 export const wait = ms => new Promise(r => setTimeout(r, ms))
+
+/** Close shared connections so the test process can exit. */
+export async function teardown(mongoose) {
+  await (await import('../services/redis.js')).closeRedis()
+  if (mongoose) await mongoose.disconnect()
+}

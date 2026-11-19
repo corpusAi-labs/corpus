@@ -4,7 +4,8 @@ import { z } from 'zod'
 import User from '../models/User.js'
 import Item from '../models/Item.js'
 import Space from '../models/Space.js'
-import Otp from '../models/Otp.js'
+import { deleteOtp } from '../services/otpStore.js'
+import { revokeAllAccessTokens } from '../services/authGuard.js'
 import AuditLog from '../models/AuditLog.js'
 import ItemChunk from '../models/ItemChunk.js'
 import Job from '../models/Job.js'
@@ -110,6 +111,7 @@ export async function exportData(req, res) {
 export async function signOutEverywhere(req, res) {
   try {
     await User.updateOne({ _id: req.user.id }, { refreshTokens: [], rotatedTokens: [] })
+    await revokeAllAccessTokens(req.user.id) // every device's access token stops working now
     auditEvent(req.user.id, 'auth.logout_all', 'Signed out of all devices', req)
     res.clearCookie('refreshToken', cookieOpts)
     res.clearCookie('accessToken', cookieOpts)
@@ -163,9 +165,10 @@ export async function deleteAccount(req, res) {
       Job.deleteMany({ userId }),
       Space.deleteMany({ userId }),
       AuditLog.deleteMany({ userId }),
-      Otp.deleteMany({ email: user.email }),
+      deleteOtp(user.email),
     ])
     await User.deleteOne({ _id: userId })
+    await revokeAllAccessTokens(userId)
 
     // Don't write an access-log entry for a user that no longer exists
     getContext()?.access.delete(String(userId))

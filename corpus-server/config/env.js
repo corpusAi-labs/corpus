@@ -43,6 +43,10 @@ const schema = z
     // providers you use under zero-retention / no-training terms (e.g. paid tiers).
     AI_PRIVATE_PROVIDERS: z.string().default('groq,gemini'),
 
+    // ── Redis (rate limits, login lockout, OTPs, token revocation) ──
+    REDIS_URL: z.string().optional(), // e.g. redis://localhost:6379 or rediss://… (TLS)
+    REDIS_KEY_PREFIX: z.string().default('corpus:'),
+
     // ── Network ──
     TRUST_PROXY: z.coerce.number().int().min(0).default(0), // hops; set 1 behind Render/Railway/Heroku
     CORS_ORIGINS: z.string().optional(), // extra comma-separated origins
@@ -57,6 +61,9 @@ const schema = z
           console.warn(`[env] ${k} is shorter than 32 characters — fine for dev, rejected in production`)
         }
       }
+    }
+    if (env.NODE_ENV === 'production' && !env.REDIS_URL) {
+      console.warn('[env] REDIS_URL is not set — rate limits, login lockout and token revocation fall back to per-instance memory')
     }
     if (env.KEY_PROVIDER === 'local' && !env.DATA_ENCRYPTION_KEY) {
       ctx.addIssue({ code: 'custom', path: ['DATA_ENCRYPTION_KEY'], message: 'required when KEY_PROVIDER=local' })

@@ -1,11 +1,33 @@
-import { rateLimit } from 'express-rate-limit'
+import { rateLimit as baseRateLimit } from 'express-rate-limit'
+import { RedisStore } from 'rate-limit-redis'
+import { getRedisClient } from '../services/redis.js'
+import { getEnv } from '../config/env.js'
 
 /**
  * Layered rate limits. Keys are the authenticated user where available
  * (fair per account, works behind NAT), otherwise the client IP.
- * NOTE: in-memory store — per instance. For multiple instances, plug in a
- * shared store (e.g. rate-limit-redis) without changing call sites.
+ *
+ * With REDIS_URL the counters live in Redis, so limits hold across every
+ * server instance (otherwise each instance would allow the full quota).
+ * If Redis has a blip the limiter fails open — a Redis outage must not lock
+ * every user out — and the per-account login lockout still applies.
  */
+let limiterCount = 0
+function rateLimit(options) {
+  const redis = getRedisClient()
+  const name = `rl${++limiterCount}`
+  return baseRateLimit({
+    ...options,
+    passOnStoreError: true,
+    ...(redis && {
+      store: new RedisStore({
+        sendCommand: (...args) => redis.call(...args),
+        prefix: `${getEnv().REDIS_KEY_PREFIX}${name}:`,
+      }),
+    }),
+  })
+}
+
 const common = { standardHeaders: 'draft-7', legacyHeaders: false }
 const ip = req => req.ip || 'unknown'
 const userOrIp = req => (req.user?.id ? `u:${req.user.id}` : `ip:${ip(req)}`)

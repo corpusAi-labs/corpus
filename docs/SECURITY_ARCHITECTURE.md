@@ -98,6 +98,17 @@ sequenceDiagram
 - OTPs: CSPRNG, HMAC at rest, timing-safe compare, burned after 5 failures, 60-second resend cooldown.
 - Security events (`auth.login`, `auth.login_failed`, `auth.logout_all`, `auth.token_reuse`, …) go to the same user-visible log.
 
+### Redis: shared, short-lived security state
+| Key | Purpose | TTL |
+|---|---|---|
+| `rl<n>:<ip/user>` | Rate-limit counters shared by all instances (`rate-limit-redis`) | limiter window |
+| `auth:fail:<email>` / `auth:lock:<email>` | Per-account lockout: 5 wrong passwords lock the account for 15 min, whatever the IP. It applies to unknown emails too, so the response never reveals whether an account exists | 15 min |
+| `otp:<email>`, `otp:attempts:<email>` | Pending OTP (HMAC only) and an atomic attempt counter | 10 min |
+| `auth:revoked:<jti>` | Logout revokes *this* access token immediately | until the token expires |
+| `auth:valid-after:<userId>` | Sign out everywhere, password change, token theft and deletion revoke every earlier access token (millisecond cut-off) | 16 min |
+
+Redis holds only ephemeral, TTL'd state. **Unwrapped encryption keys are never put in Redis**; they live only in process memory. Rate limiting and the revocation check *fail open* during a Redis outage (tokens still expire within 15 min), while OTP verification fails closed. Without `REDIS_URL` an in-memory store with the same interface is used for development and tests.
+
 ## 6. Deliberate trade-offs
 
 | Decision | Why | Cost / mitigation |
@@ -166,7 +177,7 @@ npm run keys:rotate -- --apply     # re-wraps every DEK; data is not re-encrypte
 |---|---|---|
 | Access log | `AUDIT_RETENTION_DAYS` (30) | MongoDB TTL index |
 | Trash | `TRASH_RETENTION_DAYS` (30) | `jobs/purgeTrash.js` every 6 h (also deletes media) |
-| Pending OTPs | 10 minutes | TTL index |
+| Pending OTPs | 10 minutes | Redis TTL |
 | Deleted accounts | Immediate | Crypto-shred, then hard delete, then async media delete |
 
 ## 9. Verification

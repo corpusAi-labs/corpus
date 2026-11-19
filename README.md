@@ -43,6 +43,7 @@ Corpus is a full-stack personal knowledge management app. Save links, notes, and
 | Frontend      | React, MERN stack                          |
 | Backend       | Node.js, Express                           |
 | Database      | MongoDB                                    |
+| Cache         | Redis: rate limits, login lockout, OTPs, token revocation |
 | AI            | Groq (LLaMA) — summarization & tagging     |
 | Auth          | JWT (access + refresh tokens)              |
 | Security      | AES-256-GCM envelope encryption, pluggable KMS, audit log |
@@ -58,7 +59,7 @@ User content is **encrypted before it reaches the database**, with a key unique 
 - **Field-level AES-256-GCM**, bound to the owner and field via AAD. Tag filters and duplicate detection use per-user **blind indexes**.
 - **Crypto-shredding.** Deleting an account destroys its key, so its data is unreadable even in old backups.
 - **Access log.** Every decrypt, whether by the user or by a background AI job, is recorded. Users can view it and download it as CSV.
-- **Hardened auth.** Refresh tokens are hashed and rotated, with theft (reuse) detection; OTPs are HMAC-hashed with an attempt lockout; layered rate limits; strict CORS.
+- **Hardened auth.** Refresh tokens are hashed and rotated, with theft (reuse) detection; OTPs are HMAC-hashed with an attempt lockout; per-account login lockout; logout takes effect immediately; Redis-backed rate limits shared across instances; strict CORS.
 - **Private media.** Uploads are served via expiring signed URLs.
 - **User controls.** Export all data as JSON, sign out everywhere, delete account.
 - **PDFs.** Encrypted file storage; every page searchable through an encrypted word index and semantic vectors; AI summaries and key points; parsing in a locked-down worker thread; a restart-safe job queue; a per-item "keep away from AI" switch.
@@ -72,6 +73,7 @@ Threat model, diagrams, trade-offs and runbooks: **[docs/SECURITY_ARCHITECTURE.m
 ### Prerequisites
 - Node.js (v18+)
 - MongoDB instance (local or Atlas)
+- Redis (optional locally; recommended in production). `docker compose up -d` starts both
 - Groq API key
 
 ### Setup

@@ -1,6 +1,6 @@
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { setupEnv, connectFresh, startServer, skipNoDb, wait } from './helpers.js'
+import { setupEnv, connectFresh, startServer, skipNoDb, wait, teardown } from './helpers.js'
 
 setupEnv('corpus_test_api')
 
@@ -32,7 +32,7 @@ describe('API: encryption at rest, access log, auth hardening, deletion', { skip
   })
   after(async () => {
     await srv.close()
-    await mongoose.disconnect()
+    await teardown(mongoose)
   })
 
   let noteId
@@ -153,9 +153,9 @@ describe('API: encryption at rest, access log, auth hardening, deletion', { skip
   })
 
   test('OTP: stored as HMAC, burned after 5 wrong attempts', async () => {
-    const Otp = (await import('../models/Otp.js')).default
+    const otpStore = await import('../services/otpStore.js')
     const email = 'alice@test.dev'
-    await Otp.create({ email, otpHash: hashOtp(email, '123456'), name: 'Alice', passwordHash: 'x' })
+    await otpStore.saveOtp(email, { otpHash: hashOtp(email, '123456'), name: 'Alice', passwordHash: 'x' })
     const c = srv.client()
     for (let i = 0; i < 5; i++) {
       const r = await c.post('/auth/confirm-password-setup', { email, otp: '000000', password: 'newpassword1' })
@@ -163,7 +163,39 @@ describe('API: encryption at rest, access log, auth hardening, deletion', { skip
     }
     const r = await c.post('/auth/confirm-password-setup', { email, otp: '123456', password: 'newpassword1' })
     assert.equal(r.status, 429, 'even the correct code is rejected once burned')
-    assert.equal(await Otp.countDocuments({ email }), 0)
+    assert.equal(await otpStore.getOtp(email), null, 'burned code is deleted')
+  })
+
+  test('logout revokes the access token immediately (not in 15 minutes)', async () => {
+    const c = await signIn('bob@test.dev')
+    const stolenAccess = c.jar.get('accessToken')
+    assert.equal((await c.get('/items')).status, 200)
+    await c.post('/auth/logout')
+    const replay = srv.client(new Map([['accessToken', stolenAccess]]))
+    assert.equal((await replay.get('/items')).status, 401)
+  })
+
+  test('sign out everywhere kills access tokens on other devices immediately', async () => {
+    const phone = await signIn('bob@test.dev')
+    const laptop = await signIn('bob@test.dev')
+    assert.equal((await phone.get('/items')).status, 200)
+    assert.equal((await laptop.post('/account/sign-out-everywhere')).status, 200)
+    assert.equal((await phone.get('/items')).status, 401, 'phone is signed out without waiting for expiry')
+    assert.equal((await signIn('bob@test.dev').then(c => c.get('/items'))).status, 200, 'a fresh sign-in works')
+  })
+
+  test('per-account lockout after 5 wrong passwords, without revealing if the account exists', async () => {
+    const bcryptLocal = (await import('bcryptjs')).default
+    await User.create({ email: 'carol@test.dev', passwordHash: await bcryptLocal.hash('carol-right-pass', 4) })
+    const attempt = (email, password) => srv.client().post('/auth/login', { email, password }, { 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` })
+    for (let i = 0; i < 4; i++) assert.equal((await attempt('carol@test.dev', 'wrong')).status, 401)
+    const fifth = await attempt('carol@test.dev', 'wrong')
+    assert.equal(fifth.status, 429)
+    assert.equal(fifth.body.code, 'ACCOUNT_LOCKED')
+    assert.equal((await attempt('carol@test.dev', 'carol-right-pass')).status, 429, 'even the right password is refused while locked')
+
+    for (let i = 0; i < 4; i++) await attempt('ghost@test.dev', 'x')
+    assert.equal((await attempt('ghost@test.dev', 'x')).body.code, 'ACCOUNT_LOCKED', 'unknown emails lock the same way')
   })
 
   test('CORS rejects unknown origins', async () => {

@@ -6,6 +6,8 @@ import passport from './config/passport.js'
 import { getEnv, csv } from './config/env.js'
 import { requestContextMiddleware } from './middleware/requestContext.js'
 import { apiLimiter } from './middleware/rateLimits.js'
+import mongoose from 'mongoose'
+import { kvHealth } from './services/redis.js'
 import authRoutes from './routes/auth.js'
 import itemRoutes from './routes/items.js'
 import uploadRoutes from './routes/upload.js'
@@ -51,7 +53,12 @@ export function createApp() {
   app.use(passport.initialize())
   app.use(requestContextMiddleware)
 
-  app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'corpus-server' }))
+  app.get('/api/health', (req, res) => {
+    const kv = kvHealth()
+    const db = mongoose.connection.readyState === 1 ? 'up' : 'down'
+    const ok = db === 'up' && kv.status === 'ready'
+    res.status(ok ? 200 : 503).json({ status: ok ? 'ok' : 'degraded', service: 'corpus-server', db, cache: kv })
+  })
 
   app.use('/api', apiLimiter)
   app.use('/api/auth', authRoutes)

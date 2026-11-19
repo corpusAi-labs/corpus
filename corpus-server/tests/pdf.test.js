@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
-import { setupEnv, connectFresh, startServer, skipNoDb } from './helpers.js'
+import { setupEnv, connectFresh, startServer, skipNoDb, teardown } from './helpers.js'
 import { makePdf } from './fixtures/makePdf.js'
 
 const storageDir = await fs.mkdtemp(path.join(os.tmpdir(), 'corpus-pdf-test-'))
@@ -50,7 +50,7 @@ describe('PDF documents', { skip: skipNoDb }, () => {
   })
   after(async () => {
     await srv.close()
-    await mongoose.disconnect()
+    await teardown(mongoose)
     await fs.rm(storageDir, { recursive: true, force: true })
   })
 
